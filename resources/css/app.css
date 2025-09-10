@@ -1,0 +1,54 @@
+/* Container Tabel */
+.table-container {
+    margin-top: 20px;
+    overflow-x: auto;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    padding: 10px;
+}
+
+/* Tabel Utama */
+.data-table {
+    width: 100%;
+    border-collapse: collapse; /* rapatkan border */
+    font-size: 14px;
+    text-align: left;
+}
+
+/* Header */
+.data-table thead th {
+    background: #2563eb; /* biru */
+    color: #fff;
+    font-weight: 600;
+    padding: 12px 15px;
+    border: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+/* Isi Tabel */
+.data-table tbody td {
+    padding: 10px 15px;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+    vertical-align: top;
+}
+
+/* Baris Hover */
+.data-table tbody tr:hover {
+    background: #f9fafb;
+    cursor: pointer;
+}
+
+/* Striping (selang-seling warna baris) */
+.data-table tbody tr:nth-child(even) {
+    background: #fdfdfd;
+}
+
+/* Pesan Kosong */
+.empty-msg {
+    text-align: center;
+    font-style: italic;
+    color: #6b7280;
+    padding: 20px;
+}
