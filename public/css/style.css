@@ -1,255 +1,175 @@
-/* === RESET & BODY === */
-body {
-    font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    margin: 0;
-    padding: 20px 15px;
-    background-color: #EFF6FF; /* Background lembut */
-    color: #111827; /* Teks abu gelap */
-    font-size: 14px;
+/* === FONT & GLOBAL STYLES === */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-primary: #F3F4F6; /* Light gray background */
+    --bg-secondary: #FFFFFF; /* White cards */
+    --border-color: #E5E7EB;
+    --text-primary: #111827; /* Dark text */
+    --text-secondary: #6B7280; /* Gray text */
+    --accent-blue: #3B82F6;
+    --accent-blue-dark: #2563EB;
 }
 
-/* === HEADER PAGE === */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+}
+
+/* === DETAIL PAGE HEADER === */
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 25px;
-    margin: 0 auto 25px auto; /* Memberi jarak bawah ke card utama */
-    width: 95%;
-    max-width: 1400px;
-    background-color: #FFFFFF;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    box-sizing: border-box; /* Penting agar padding tidak menambah width */
+    padding: 1rem 2rem;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 2rem;
 }
 
 .page-header .app-title {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #2563EB;
-}
-
-.page-header .header-center {
-    display: flex;
-    align-items: center;
-}
-
-.page-header .divider {
-    color: #9CA3AF; /* Warna divider dibuat lebih soft */
-    font-size: 1.5em;
-    margin-right: 15px;
-    font-weight: 300;
+    font-size: 1.25rem;
+    font-weight: 700;
 }
 
 .page-header .page-title {
-    font-size: 1.1em;
+    font-size: 1.125rem;
     font-weight: 600;
-    color: #111827;
-    margin: 0;
+    color: var(--text-secondary);
 }
 
-.page-header .back-button-header {
-    padding: 8px 16px;
-    font-size: 0.9em;
-    background-color: #3B82F6;
-    border: none;
-    color: #FFFFFF;
+.page-header .back-button {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: var(--accent-blue);
+    color: white;
     text-decoration: none;
-    border-radius: 6px;
-    transition: background-color 0.3s;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
 }
 
-.page-header .back-button-header:hover {
-    background-color: #2563EB;
+.page-header .back-button:hover {
+    background-color: var(--accent-blue-dark);
 }
 
-/* === CONTAINER UTAMA (Data + Foto Samping) === */
+/* === DETAIL PAGE LAYOUT === */
 .detail-container {
     display: flex;
-    gap: 30px;
-    width: 95%;
-    max-width: 1400px;
-    margin: 0 auto;
-    flex-wrap: wrap; /* biar responsive */
+    gap: 2rem;
+    padding: 0 2rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
 }
 
-/* === KOLOM DATA & FOTO === */
 .info-column {
-    flex: 2;
-    min-width: 300px;
+    flex: 3;
+    min-width: 400px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
 .media-column {
-    flex: 1;
-    min-width: 280px;
+    flex: 2;
+    min-width: 350px;
 }
 
-/* === DETAIL CARD (Styling untuk card info & foto) === */
 .detail-card {
-    border: 1px solid #D1D5DB;
-    border-radius: 12px;
-    padding: 25px;
-    background-color: #FFFFFF;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    height: 100%; /* Membuat card mengisi tinggi kolom */
-    box-sizing: border-box;
+    padding: 2rem;
 }
 
-/* === DATA LIST (DIRAPIKAN) === */
-.definition-item {
+.definition-list .definition-item {
     display: flex;
-    align-items: baseline;
-    padding: 12px 0;
-    border-bottom: 1px solid #E5E7EB;
-    gap: 15px;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
 }
 
-.definition-item:last-child {
+.definition-list .definition-item:last-child {
     border-bottom: none;
 }
 
 .definition-item dt {
-    flex-basis: 220px;
+    width: 200px;
     flex-shrink: 0;
-    font-weight: 600;
-    color: #374151;
-}
-
-.definition-item dt::after {
-    content: ":";
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 .definition-item dd {
-    flex: 1;
     margin: 0;
-    font-size: 1.05em;
-    word-break: break-word;
-    color: #111827;
+    font-weight: 600;
 }
 
 .definition-item dd a {
-    color: #2563EB;
+    color: var(--accent-blue);
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .definition-item dd a:hover {
     text-decoration: underline;
 }
 
-/* === FOTO PROYEK === */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap');
-
-.foto-proyek-title {
-    font-family: 'Poppins', sans-serif;
-    font-size: 1.4em;
-    color: #111827;
-    padding-bottom: 6px;
-    margin-bottom: 20px;
-    display: block;
-    text-align: center;
-    border-bottom: 2px solid #2563eb;
-    width: fit-content;
-    margin-left: auto;
-    margin-right: auto;
+/* === PHOTO GALLERY (DETAIL PAGE) === */
+.media-column .foto-proyek-title {
+    display: flex;
+    align-items: center;
+    font-size: 1.25rem;
+    margin-top: 0;
+    border-bottom: 2px solid var(--accent-blue);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
 }
 
-/* === GROUP FOTO === */
 .photo-group {
-    margin-bottom: 30px;
+    margin-bottom: 1.25rem;
 }
 
 .photo-group-title {
-    font-size: 1.1em;
-    color: #1E40AF;
-    margin-bottom: 15px;
-    padding-left: 10px;
-    border-left: 4px solid #22C55E;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    padding-left: 0.75rem;
+    border-left: 3px solid var(--accent-blue);
 }
 
-.photo-group-items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Perbaikan di sini */
+    gap: 0.25rem;
 }
 
 .gallery-item {
-    border: 1px solid #D1D5DB;
-    flex: 1 1 140px; /* Diperkecil dari 160px */
-    max-width: 160px; /* Diperkecil dari 180px */
-    text-align: center;
-    background-color: #FFFFFF;
-    padding: 8px;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.07);
+    max-width: 150px; /* PERBAIKAN DI SINI */
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gallery-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
 .gallery-item img {
     width: 100%;
-    height: 100px; /* Diperkecil dari 120px */
-    object-fit: cover;
-    border-radius: 6px;
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-}
-
-.gallery-item img:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    aspect-ratio: 4 / 3;
+    display: block;
 }
 
 .gallery-caption {
-    font-size: 0.85em;
-    font-weight: 600;
-    color: #111827;
-    margin-bottom: 8px;
-}
-
-/* === FITUR 'LIHAT SEMUA' === */
-.gallery-item.hidden-initially {
-    display: none;
-}
-
-.view-all-container {
+    margin: 0;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
     text-align: center;
-    margin-top: 20px;
+    color: var(--text-secondary);
 }
-
-.view-all-button {
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-size: 0.9em;
-    color: #333;
-    cursor: pointer;
-    transition: background-color 0.3s, box-shadow 0.3s;
-}
-
-.view-all-button:hover {
-    background-color: #e9e9e9;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-/* === RESPONSIVE === */
-@media (max-width: 992px) {
-    .detail-container {
-        flex-direction: column;
-    }
-}
-
-@media (max-width: 768px) {
-    .page-header {
-        flex-direction: column;
-        gap: 15px;
-        padding: 15px;
-    }
-    .definition-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 5px;
-    }
-    .definition-item dt {
-        flex-basis: auto; /* Hapus lebar tetap di mobile */
-    }
-}
-

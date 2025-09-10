@@ -82,6 +82,7 @@ class ProjectController extends Controller
 
                 // --- LOGIKA BARU UNTUK MENGELOMPOKKAN GAMBAR ---
                 $groupedGallery = [];
+                $allPhotos = [];
                 foreach ($galleryItems as $item) {
                     if (empty($item['caption']) || empty($item['path'])) continue;
                     
@@ -94,15 +95,15 @@ class ProjectController extends Controller
                     
                     // Masukkan item ke dalam grupnya
                     $groupedGallery[$groupName][] = $item;
+                    $allPhotos[] = $item;
                 }
                 // ---------------------------------------------
 
-                // Kirim data yang sudah dikelompokkan ke view
-                return view('projects.detail', compact('header', 'selectedRow', 'groupedGallery'));
+                // Kirim data yang sudah dikelompokkan dan semua foto ke view
+                return view('projects.detail', compact('header', 'selectedRow', 'groupedGallery', 'allPhotos'));
             }
         }
 
         return view('projects.not-found');
     }
 }
-

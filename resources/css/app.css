@@ -1,54 +1,188 @@
-/* Container Tabel */
-.table-container {
-    margin-top: 20px;
-    overflow-x: auto;
-    border-radius: 8px;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    padding: 10px;
+/* === FONT & RESET === */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --bg-primary: #111827;
+    --bg-secondary: #1F2937;
+    --border-color: #374151;
+    --text-primary: #F9FAFB;
+    --text-secondary: #9CA3AF;
+    --accent-blue: #3B82F6;
 }
 
-/* Tabel Utama */
+body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+}
+
+/* === MAIN LAYOUT === */
+.main-container {
+    padding: 2rem;
+}
+
+.main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-left h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.875rem;
+    color: var(--text-primary);
+}
+
+.header-left p {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+.header-right {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+/* === FILTERS & SEARCH === */
+.search-bar {
+    position: relative;
+}
+
+.search-bar .icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+}
+
+.search-bar input, .filter-dropdown {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-family: 'Inter', sans-serif;
+}
+
+.search-bar input {
+    padding-left: 2.5rem;
+}
+
+/* === SUMMARY CARDS === */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.card {
+    background-color: var(--bg-secondary);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.card .icon-container {
+    padding: 0.75rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.card .icon-container.blue { background-color: rgba(59, 130, 246, 0.2); color: #60A5FA; }
+.card .icon-container.green { background-color: rgba(16, 185, 129, 0.2); color: #34D399; }
+.card .icon-container.purple { background-color: rgba(139, 92, 246, 0.2); color: #A78BFA; }
+
+.card-content .value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.card-content .label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* === DATA TABLE === */
+.table-wrapper {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    overflow-x: auto;
+}
+
+.table-header {
+    margin-bottom: 1rem;
+}
+
+.table-header h2 {
+    font-size: 1.25rem;
+    margin: 0;
+    color: var(--text-primary);
+}
+
 .data-table {
     width: 100%;
-    border-collapse: collapse; /* rapatkan border */
-    font-size: 14px;
-    text-align: left;
+    border-collapse: collapse;
 }
 
-/* Header */
 .data-table thead th {
-    background: #2563eb; /* biru */
-    color: #fff;
-    font-weight: 600;
-    padding: 12px 15px;
-    border: 1px solid #e5e7eb;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
 }
 
-/* Isi Tabel */
-.data-table tbody td {
-    padding: 10px 15px;
-    border: 1px solid #e5e7eb;
-    color: #374151;
-    vertical-align: top;
-}
-
-/* Baris Hover */
-.data-table tbody tr:hover {
-    background: #f9fafb;
+.data-table tbody tr {
     cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
-/* Striping (selang-seling warna baris) */
-.data-table tbody tr:nth-child(even) {
-    background: #fdfdfd;
+.data-table tbody tr:hover {
+    background-color: #2a3647;
 }
 
-/* Pesan Kosong */
-.empty-msg {
-    text-align: center;
-    font-style: italic;
-    color: #6b7280;
-    padding: 20px;
+.data-table tbody td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.google-maps-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.google-maps-link:hover {
+    text-decoration: underline;
 }
