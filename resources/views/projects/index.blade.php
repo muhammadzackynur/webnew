@@ -31,31 +31,44 @@
 
     {{-- Summary Cards --}}
     <div class="summary-cards">
+        {{-- Total Proyek --}}
         <div class="card">
             <div class="icon-container blue">
-                <i data-feather="clipboard"></i>
+                <i data-feather="briefcase"></i>
             </div>
             <div class="card-content">
                 <p class="value">{{ count($rows) }}</p>
                 <p class="label">Total Proyek</p>
             </div>
         </div>
-        <div class="card">
-            <div class="icon-container green">
-                <i data-feather="map-pin"></i>
-            </div>
-            <div class="card-content">
-                <p class="value">{{ count($datelList) }}</p>
-                <p class="label">Area Datel</p>
-            </div>
-        </div>
+        {{-- Proyek Plan --}}
         <div class="card">
             <div class="icon-container purple">
-                <i data-feather="archive"></i>
+                <i data-feather="list"></i>
             </div>
             <div class="card-content">
-                <p class="value">{{ count($stoList) }}</p>
-                <p class="label">STO Aktif</p>
+                <p class="value">{{ $planCount }}</p>
+                <p class="label">Proyek Plan</p>
+            </div>
+        </div>
+        {{-- Proyek Progress --}}
+        <div class="card">
+            <div class="icon-container green">
+                <i data-feather="activity"></i>
+            </div>
+            <div class="card-content">
+                <p class="value">{{ $progressCount }}</p>
+                <p class="label">Proyek Progress</p>
+            </div>
+        </div>
+        {{-- Proyek Done --}}
+        <div class="card">
+            <div class="icon-container" style="background-color: rgba(245, 158, 11, 0.1); color: #F59E0B;">
+                <i data-feather="check-square"></i>
+            </div>
+            <div class="card-content">
+                <p class="value">{{ $doneCount }}</p>
+                <p class="label">Proyek Done</p>
             </div>
         </div>
     </div>
@@ -134,4 +147,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-@endpush
+@endpush    

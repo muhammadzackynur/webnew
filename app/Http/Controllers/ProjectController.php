@@ -44,25 +44,40 @@ class ProjectController extends Controller
         $rows = [];
         $datelList = [];
         $stoList = [];
+        $planCount = 0;
+        $progressCount = 0;
+        $doneCount = 0;
 
         if ($data && isset($data['values']) && count($data['values']) > 1) {
             $header = array_shift($data['values']);
             $rows = $data['values'];
 
-            // Cari index kolom 'DATEL' dan 'STO'
+            // Cari index kolom yang relevan
             $datelIndex = array_search('DATEL', $header);
             $stoIndex = array_search('STO', $header);
+            $statusIndex = array_search('STATUS PEKERJAAN', $header); // Kolom untuk status
 
-            // Ambil semua nilai unik dari kolom DATEL dan STO
+            // Ambil semua nilai unik dari kolom DATEL dan STO untuk filter
             if ($datelIndex !== false) {
                 $datelList = collect($rows)->pluck($datelIndex)->unique()->filter()->sort()->values();
             }
             if ($stoIndex !== false) {
                 $stoList = collect($rows)->pluck($stoIndex)->unique()->filter()->sort()->values();
             }
+
+            // Hitung jumlah proyek berdasarkan status
+            if ($statusIndex !== false) {
+                $statuses = collect($rows)->pluck($statusIndex);
+                $planCount = $statuses->filter(fn($value) => stripos($value, 'PLAN') !== false)->count();
+                $progressCount = $statuses->filter(fn($value) => stripos($value, 'PROGRESS') !== false)->count();
+                $doneCount = $statuses->filter(fn($value) => stripos($value, 'DONE') !== false)->count();
+            }
         }
 
-        return view('projects.index', compact('header', 'rows', 'datelList', 'stoList'));
+        return view('projects.index', compact(
+            'header', 'rows', 'datelList', 'stoList',
+            'planCount', 'progressCount', 'doneCount'
+        ));
     }
 
     /**
@@ -99,7 +114,11 @@ class ProjectController extends Controller
                 $groupedGallery = [];
                 $allPhotos = [];
                 foreach ($galleryItems as $item) {
-                    if (empty($item['caption']) || empty($item['path'])) continue;
+                    if (empty($item['path'])) continue;
+                    
+                    $allPhotos[] = $item; // Kumpulkan semua foto valid untuk tombol "Lihat Semua"
+                    
+                    if (empty($item['caption'])) continue;
                     
                     $captionParts = explode(' ', trim($item['caption']));
                     $groupName = ucfirst(strtolower($captionParts[0]));
@@ -110,8 +129,6 @@ class ProjectController extends Controller
                         'path' => $item['path'],
                         'caption' => $displayCaption ?: $groupName
                     ];
-                    
-                    $allPhotos[] = $item;
                 }
                 // ---------------------------------------------
 
@@ -136,28 +153,42 @@ class ProjectController extends Controller
 
             if (isset($allRows[$rowIndex])) {
                 $selectedRow = $allRows[$rowIndex];
-                $allPhotos = [];
+                $galleryItems = [];
 
+                // Kumpulkan semua path dan keterangan foto
                 foreach ($header as $index => $title) {
                     $value = $selectedRow[$index] ?? '';
                     if (stripos($title, 'Path FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
-                        $id = $matches[0] ?? count($allPhotos);
-                        if (!empty($value)) $allPhotos[$id]['path'] = $value;
+                        $id = $matches[0] ?? count($galleryItems);
+                        if (!empty($value)) $galleryItems[$id]['path'] = $value;
                     } elseif (stripos($title, 'Keterangan FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
-                        $id = $matches[0] ?? count($allPhotos);
-                        $allPhotos[$id]['caption'] = $value;
+                        $id = $matches[0] ?? count($galleryItems);
+                        $galleryItems[$id]['caption'] = $value;
                     }
                 }
-                ksort($allPhotos);
+                ksort($galleryItems);
                 
-                // Filter out items without a path
-                $allPhotos = array_filter($allPhotos, function($item) {
-                    return !empty($item['path']);
-                });
+                // Filter items yang tidak punya path
+                $galleryItems = array_filter($galleryItems, fn($item) => !empty($item['path']));
 
-                return view('projects.gallery-all', compact('allPhotos', 'title', 'rowIndex'));
+                // Kelompokkan gambar berdasarkan keterangan (Before, Progress, After, dll.)
+                $groupedGallery = [];
+                foreach ($galleryItems as $item) {
+                    if (empty($item['caption'])) continue;
+                    
+                    $captionParts = explode(' ', trim($item['caption']));
+                    $groupName = ucfirst(strtolower($captionParts[0]));
+                    $displayCaption = implode(' ', array_slice($captionParts, 1));
+                    
+                    $groupedGallery[$groupName][] = [
+                        'path' => $item['path'],
+                        'caption' => $displayCaption ?: $groupName
+                    ];
+                }
+
+                return view('projects.gallery-all', compact('groupedGallery', 'title', 'rowIndex'));
             }
         }
         return view('projects.not-found');

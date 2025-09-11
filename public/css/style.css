@@ -55,6 +55,15 @@ body {
     background-color: var(--accent-blue-dark);
 }
 
+/* === LOGO APP (FIXED) === */
+.page-header .app-logo {
+    width: 120px !important;     /* Ukuran lebar logo */
+    height: auto !important;     /* Proporsional */
+    max-height: 60px !important; /* Batasi tinggi maksimal */
+    object-fit: contain;
+    display: block;
+}
+
 /* === DETAIL PAGE LAYOUT === */
 .detail-container {
     display: flex;

@@ -3,14 +3,15 @@
 @section('title', 'Detail Data Proyek')
 
 @section('page-styles')
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('style.css') }}">
 @endsection
 
 @section('content')
 {{-- Header Halaman Khusus Detail --}}
 <div class="page-header">
     <div class="header-left">
-        <span class="app-title">ProyekApp</span>
+        {{-- PERUBAHAN DI SINI: Mengganti teks dengan gambar logo --}}
+        <img src="{{ asset('images/PT.PNG') }}" alt="Logo Telkom Akses" class="app-logo">
     </div>
     <div class="header-center">
         <h2 class="page-title">Detail Proyek</h2>
@@ -72,7 +73,13 @@
             @if (!empty($allPhotos))
                 @foreach ($groupedGallery as $groupName => $items)
                     <div class="photo-group">
-                        <h4 class="photo-group-title">{{ $groupName }}</h4>
+                        @php
+                            $titleClass = '';
+                            if (stripos($groupName, 'Before') !== false) $titleClass = 'title-before';
+                            elseif (stripos($groupName, 'Progress') !== false) $titleClass = 'title-progress';
+                            elseif (stripos($groupName, 'After') !== false) $titleClass = 'title-after';
+                        @endphp
+                        <h4 class="photo-group-title {{ $titleClass }}">{{ $groupName }}</h4>
                         <div class="photo-grid">
                             @foreach (array_slice($items, 0, 3) as $item)
                                 <div class="gallery-item">
