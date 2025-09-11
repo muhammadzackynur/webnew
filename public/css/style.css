@@ -2,11 +2,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-    --bg-primary: #F3F4F6; /* Light gray background */
-    --bg-secondary: #FFFFFF; /* White cards */
+    --bg-primary: #F3F4F6;
+    --bg-secondary: #FFFFFF;
     --border-color: #E5E7EB;
-    --text-primary: #111827; /* Dark text */
-    --text-secondary: #6B7280; /* Gray text */
+    --text-primary: #111827;
+    --text-secondary: #6B7280;
     --accent-blue: #3B82F6;
     --accent-blue-dark: #2563EB;
 }
@@ -37,7 +37,7 @@ body {
 .page-header .page-title {
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 .page-header .back-button {
@@ -96,7 +96,7 @@ body {
 .definition-item dt {
     width: 200px;
     flex-shrink: 0;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-weight: 500;
 }
 
@@ -116,15 +116,46 @@ body {
 }
 
 /* === PHOTO GALLERY (DETAIL PAGE) === */
-.media-column .foto-proyek-title {
+
+/* PERUBAHAN DI SINI: Menambahkan header untuk galeri */
+.media-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    font-size: 1.25rem;
-    margin-top: 0;
     border-bottom: 2px solid var(--accent-blue);
     padding-bottom: 0.5rem;
     margin-bottom: 1.5rem;
 }
+
+.media-column .foto-proyek-title {
+    display: flex;
+    align-items: center;
+    font-size: 1.25rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.view-all-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    text-decoration: none;
+    color: var(--accent-blue);
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: color 0.2s ease;
+}
+
+.view-all-link:hover {
+    color: var(--accent-blue-dark);
+}
+
+.view-all-link .icon-sm {
+    width: 16px;
+    height: 16px;
+}
+/* Akhir Perubahan */
 
 .photo-group {
     margin-bottom: 1.25rem;
@@ -139,13 +170,16 @@ body {
 }
 
 .photo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Perbaikan di sini */
-    gap: 0.25rem;
+    display: flex;
+    overflow-x: auto;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
 }
 
 .gallery-item {
-    max-width: 150px; /* PERBAIKAN DI SINI */
+    flex: 0 0 150px;
+    display: flex;
+    flex-direction: column;
     background-color: var(--bg-secondary);
     border-radius: 12px;
     border: 1px solid var(--border-color);
@@ -161,15 +195,17 @@ body {
 
 .gallery-item img {
     width: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
     display: block;
 }
 
 .gallery-caption {
     margin: 0;
-    padding: 0.75rem;
-    font-size: 0.875rem;
+    padding: 0.5rem;
+    font-size: 0.75rem;
     font-weight: 500;
     text-align: center;
-    color: var(--text-secondary);
+    color: var(--text-primary);
+    margin-top: auto;
 }

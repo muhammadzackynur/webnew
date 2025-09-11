@@ -11,17 +11,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
 
-    {{-- Logika untuk memuat CSS yang berbeda --}}
-    @hasSection('page-styles')
-        {{-- Jika view punya section 'page-styles', muat itu --}}
-        @yield('page-styles')
-    @else
-        {{-- Jika tidak, muat CSS default dari Vite --}}
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @endif
+    {{-- Memuat CSS secara langsung dari folder public --}}
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+
 </head>
 <body>
-    {{-- Hapus class dark-theme dari body agar tidak menjadi default --}}
     <div class="main-container">
         <main>
             @yield('content')

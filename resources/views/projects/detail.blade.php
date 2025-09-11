@@ -3,7 +3,6 @@
 @section('title', 'Detail Data Proyek')
 
 @section('page-styles')
-    {{-- Baris ini akan memuat style.css khusus untuk halaman ini --}}
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
 @endsection
 
@@ -54,18 +53,28 @@
 
     {{-- Kolom Galeri Foto --}}
     <div class="media-column">
-        <h3 class="foto-proyek-title">
-            <i data-feather="image" style="width:20px; height:20px; margin-right: 8px;"></i>
-            Foto Proyek
-        </h3>
+        <div class="detail-card">
+            
+            <div class="media-header">
+                <h3 class="foto-proyek-title">
+                    <i data-feather="image" style="width:20px; height:20px; margin-right: 8px;"></i>
+                    Foto Proyek
+                </h3>
+                {{-- Tombol "Lihat Semua" dipindahkan ke sini --}}
+                @if (count($allPhotos) > 3)
+                    <a href="{{ route('project.gallery', ['rowIndex' => $rowIndex]) }}" class="view-all-link">
+                        Lihat Semua ({{ count($allPhotos) }})
+                        <i data-feather="arrow-right" class="icon-sm"></i>
+                    </a>
+                @endif
+            </div>
 
-        @if (!empty($groupedGallery))
-            @foreach ($groupedGallery as $groupName => $items)
-                <div class="photo-group">
-                    <h4 class="photo-group-title">{{ $groupName }}</h4>
-                    <div class="photo-grid">
-                        @foreach ($items as $item)
-                            @if (!empty($item['path']))
+            @if (!empty($allPhotos))
+                @foreach ($groupedGallery as $groupName => $items)
+                    <div class="photo-group">
+                        <h4 class="photo-group-title">{{ $groupName }}</h4>
+                        <div class="photo-grid">
+                            @foreach (array_slice($items, 0, 3) as $item)
                                 <div class="gallery-item">
                                     <a href="{{ asset('storage/' . $item['path']) }}" target="_blank" title="Klik untuk memperbesar">
                                         <img src="{{ asset('storage/' . $item['path']) }}" alt="{{ htmlspecialchars($item['caption']) }}">
@@ -74,16 +83,14 @@
                                         {{ htmlspecialchars($item['caption'] ?: 'Keterangan foto') }}
                                     </p>
                                 </div>
-                            @endif
-                        @endforeach
+                            @endforeach
+                        </div>
                     </div>
-                </div>
-            @endforeach
-        @else
-            <div class="detail-card">
+                @endforeach
+            @else
                 <p>Tidak ada foto tersedia untuk proyek ini.</p>
-            </div>
-        @endif
+            @endif
+        </div>
     </div>
 </div>
 @endsection
