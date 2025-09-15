@@ -45,8 +45,10 @@
 </style>
 
 <div class="page-header">
-    <span class="app-title">ProyekApp</span>
-    <h2 class="page-title">{{ $title }}</h2>
+    <img src="{{ asset('images/PT.PNG') }}" alt="Logo Telkom Akses" class="app-logo" style="height: 50px;">
+    
+    {{-- PERUBAHAN DI SINI: Baris kode h2 yang menampilkan judul dihapus --}}
+    
     <a href="{{ route('project.show', ['rowIndex' => $rowIndex]) }}" class="back-button">
         &larr; Kembali ke Detail
     </a>

@@ -396,13 +396,13 @@
 
     /* === WARNA JUDUL GRUP GALERI === */
     .photo-group-title.title-before {
-        border-left-color: #EF4444 !important; /* Merah untuk Before */
+        border-left-color: #EF4444 !important;
     }
     .photo-group-title.title-progress {
-        border-left-color: #F59E0B !important; /* Kuning untuk Progress */
+        border-left-color: #F59E0B !important; 
     }
     .photo-group-title.title-after {
-        border-left-color: #10B981 !important; /* Hijau untuk After */
+        border-left-color: #10B981 !important; 
     }
 </style>
 

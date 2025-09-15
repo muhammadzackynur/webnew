@@ -10,8 +10,8 @@
 {{-- Header Halaman Khusus Detail --}}
 <div class="page-header">
     <div class="header-left">
-        {{-- PERUBAHAN DI SINI: Mengganti teks dengan gambar logo --}}
-        <img src="{{ asset('images/PT.PNG') }}" alt="Logo Telkom Akses" class="app-logo">
+        {{-- PERUBAHAN DI SINI: Mengatur tinggi logo menjadi 50px --}}
+        <img src="{{ asset('images/PT.PNG') }}" alt="Logo Telkom Akses" class="app-logo" style="height: 50px;">
     </div>
     <div class="header-center">
         <h2 class="page-title">Detail Proyek</h2>
