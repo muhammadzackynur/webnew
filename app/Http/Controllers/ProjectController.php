@@ -11,7 +11,7 @@ class ProjectController extends Controller
 {
     // Kredensial API Anda. Untuk keamanan, lebih baik simpan di file .env
     private $apiKey = 'AIzaSyC6lnm-I1v7-09PAeKvfkVcnUGiUx-ECvE'; // Ganti dengan API Key Anda
-    private $spreadsheetId = '1eQDfqKZ63i2wowohqkmClkgX132wSRsJmbYgaIIlLJE'; // Ganti dengan ID Spreadsheet Anda
+    private $spreadsheetId = '1DcneJQUGCp1NHXGI7LUlgAd53aBnOULY7w6xqT02dSk'; // Ganti dengan ID Spreadsheet Anda
     private $sheetName = 'Data';
 
     /**
@@ -52,20 +52,16 @@ class ProjectController extends Controller
             $header = array_shift($data['values']);
             $rows = $data['values'];
 
-            // Cari index kolom yang relevan
             $datelIndex = array_search('DATEL', $header);
             $stoIndex = array_search('STO', $header);
-            $statusIndex = array_search('STATUS PEKERJAAN', $header); // Kolom untuk status
+            $statusIndex = array_search('STATUS PEKERJAAN', $header);
 
-            // Ambil semua nilai unik dari kolom DATEL dan STO untuk filter
             if ($datelIndex !== false) {
                 $datelList = collect($rows)->pluck($datelIndex)->unique()->filter()->sort()->values();
             }
             if ($stoIndex !== false) {
                 $stoList = collect($rows)->pluck($stoIndex)->unique()->filter()->sort()->values();
             }
-
-            // Hitung jumlah proyek berdasarkan status
             if ($statusIndex !== false) {
                 $statuses = collect($rows)->pluck($statusIndex);
                 $planCount = $statuses->filter(fn($value) => stripos($value, 'PLAN') !== false)->count();
@@ -83,7 +79,7 @@ class ProjectController extends Controller
     /**
      * Menampilkan detail satu data proyek.
      */
-    public function show(int $rowIndex): View
+    public function show($rowIndex): View
     {
         $data = $this->getSheetData();
 
@@ -95,13 +91,13 @@ class ProjectController extends Controller
                 $selectedRow = $allRows[$rowIndex];
                 $galleryItems = [];
 
-                // Kumpulkan semua item galeri seperti biasa
                 foreach ($header as $index => $title) {
                     $value = $selectedRow[$index] ?? '';
-                    if (stripos($title, 'Path FOTO') !== false) {
+                    // === PERUBAHAN DI SINI: Mencari 'URL FOTO' bukan 'Path FOTO' ===
+                    if (stripos($title, 'URL FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
                         $id = $matches[0] ?? count($galleryItems);
-                        if (!empty($value)) $galleryItems[$id]['path'] = $value;
+                        if (!empty($value)) $galleryItems[$id]['url'] = $value; // Menggunakan key 'url'
                     } elseif (stripos($title, 'Keterangan FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
                         $id = $matches[0] ?? count($galleryItems);
@@ -110,27 +106,25 @@ class ProjectController extends Controller
                 }
                 ksort($galleryItems);
 
-                // --- LOGIKA UNTUK MENGELOMPOKKAN GAMBAR ---
                 $groupedGallery = [];
                 $allPhotos = [];
                 foreach ($galleryItems as $item) {
-                    if (empty($item['path'])) continue;
+                    // === PERUBAHAN DI SINI: Mengecek key 'url' ===
+                    if (empty($item['url'])) continue;
                     
-                    $allPhotos[] = $item; // Kumpulkan semua foto valid untuk tombol "Lihat Semua"
+                    $allPhotos[] = $item;
                     
                     if (empty($item['caption'])) continue;
                     
                     $captionParts = explode(' ', trim($item['caption']));
                     $groupName = ucfirst(strtolower($captionParts[0]));
-
                     $displayCaption = implode(' ', array_slice($captionParts, 1));
                     
                     $groupedGallery[$groupName][] = [
-                        'path' => $item['path'],
+                        'url' => $item['url'], // Menggunakan key 'url'
                         'caption' => $displayCaption ?: $groupName
                     ];
                 }
-                // ---------------------------------------------
 
                 return view('projects.detail', compact('header', 'selectedRow', 'groupedGallery', 'allPhotos', 'rowIndex'));
             }
@@ -142,7 +136,7 @@ class ProjectController extends Controller
     /**
      * Menampilkan semua foto di halaman terpisah.
      */
-    public function showAllGallery(int $rowIndex): View
+    public function showAllGallery($rowIndex): View
     {
         $data = $this->getSheetData();
         $title = "Semua Foto Proyek";
@@ -155,13 +149,13 @@ class ProjectController extends Controller
                 $selectedRow = $allRows[$rowIndex];
                 $galleryItems = [];
 
-                // Kumpulkan semua path dan keterangan foto
                 foreach ($header as $index => $title) {
                     $value = $selectedRow[$index] ?? '';
-                    if (stripos($title, 'Path FOTO') !== false) {
+                     // === PERUBAHAN DI SINI: Mencari 'URL FOTO' bukan 'Path FOTO' ===
+                    if (stripos($title, 'URL FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
                         $id = $matches[0] ?? count($galleryItems);
-                        if (!empty($value)) $galleryItems[$id]['path'] = $value;
+                        if (!empty($value)) $galleryItems[$id]['url'] = $value; // Menggunakan key 'url'
                     } elseif (stripos($title, 'Keterangan FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
                         $id = $matches[0] ?? count($galleryItems);
@@ -170,10 +164,8 @@ class ProjectController extends Controller
                 }
                 ksort($galleryItems);
                 
-                // Filter items yang tidak punya path
-                $galleryItems = array_filter($galleryItems, fn($item) => !empty($item['path']));
+                $galleryItems = array_filter($galleryItems, fn($item) => !empty($item['url'])); // Mengecek key 'url'
 
-                // Kelompokkan gambar berdasarkan keterangan (Before, Progress, After, dll.)
                 $groupedGallery = [];
                 foreach ($galleryItems as $item) {
                     if (empty($item['caption'])) continue;
@@ -183,7 +175,7 @@ class ProjectController extends Controller
                     $displayCaption = implode(' ', array_slice($captionParts, 1));
                     
                     $groupedGallery[$groupName][] = [
-                        'path' => $item['path'],
+                        'url' => $item['url'], // Menggunakan key 'url'
                         'caption' => $displayCaption ?: $groupName
                     ];
                 }

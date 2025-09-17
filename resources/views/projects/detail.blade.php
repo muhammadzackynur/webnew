@@ -10,7 +10,6 @@
 {{-- Header Halaman Khusus Detail --}}
 <div class="page-header">
     <div class="header-left">
-        {{-- PERUBAHAN DI SINI: Mengatur tinggi logo menjadi 50px --}}
         <img src="{{ asset('images/PT.PNG') }}" alt="Logo Telkom Akses" class="app-logo" style="height: 50px;">
     </div>
     <div class="header-center">
@@ -61,7 +60,6 @@
                     <i data-feather="image" style="width:20px; height:20px; margin-right: 8px;"></i>
                     Foto Proyek
                 </h3>
-                {{-- Tombol "Lihat Semua" dipindahkan ke sini --}}
                 @if (count($allPhotos) > 3)
                     <a href="{{ route('project.gallery', ['rowIndex' => $rowIndex]) }}" class="view-all-link">
                         Lihat Semua ({{ count($allPhotos) }})
@@ -83,8 +81,9 @@
                         <div class="photo-grid">
                             @foreach (array_slice($items, 0, 3) as $item)
                                 <div class="gallery-item">
-                                    <a href="{{ asset('storage/' . $item['path']) }}" target="_blank" title="Klik untuk memperbesar">
-                                        <img src="{{ asset('storage/' . $item['path']) }}" alt="{{ htmlspecialchars($item['caption']) }}">
+                                    {{-- === PERBAIKAN UTAMA ADA DI SINI === --}}
+                                    <a href="{{ $item['url'] }}" target="_blank" title="Klik untuk memperbesar">
+                                        <img src="{{ $item['url'] }}" alt="{{ htmlspecialchars($item['caption']) }}">
                                     </a>
                                     <p class="gallery-caption">
                                         {{ htmlspecialchars($item['caption'] ?: 'Keterangan foto') }}

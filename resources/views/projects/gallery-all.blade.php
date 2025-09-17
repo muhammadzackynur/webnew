@@ -47,8 +47,6 @@
 <div class="page-header">
     <img src="{{ asset('images/PT.PNG') }}" alt="Logo Telkom Akses" class="app-logo" style="height: 50px;">
     
-    {{-- PERUBAHAN DI SINI: Baris kode h2 yang menampilkan judul dihapus --}}
-    
     <a href="{{ route('project.show', ['rowIndex' => $rowIndex]) }}" class="back-button">
         &larr; Kembali ke Detail
     </a>
@@ -67,8 +65,9 @@
             <div class="photo-grid-all">
                 @foreach ($photos as $photo)
                     <div class="gallery-item">
-                        <a href="{{ asset('storage/' . $photo['path']) }}" target="_blank" title="Klik untuk memperbesar">
-                            <img src="{{ asset('storage/' . $photo['path']) }}" alt="{{ htmlspecialchars($photo['caption']) }}">
+                        {{-- === PERBAIKAN UTAMA ADA DI SINI === --}}
+                        <a href="{{ $photo['url'] }}" target="_blank" title="Klik untuk memperbesar">
+                            <img src="{{ $photo['url'] }}" alt="{{ htmlspecialchars($photo['caption']) }}">
                         </a>
                         <p class="gallery-caption">
                             {{ htmlspecialchars($photo['caption'] ?: 'Keterangan foto') }}
