@@ -9,18 +9,14 @@ use Illuminate\Support\Str;
 
 class ProjectController extends Controller
 {
-    // Kredensial API Anda. Untuk keamanan, lebih baik simpan di file .env
+    // Kredensial API Anda.
     private $apiKey = 'AIzaSyC6lnm-I1v7-09PAeKvfkVcnUGiUx-ECvE'; // Ganti dengan API Key Anda
     private $spreadsheetId = '1DcneJQUGCp1NHXGI7LUlgAd53aBnOULY7w6xqT02dSk'; // Ganti dengan ID Spreadsheet Anda
     private $sheetName = 'Data';
 
-    /**
-     * Fungsi privat untuk mengambil data dari Google Sheet.
-     */
     private function getSheetData()
     {
         $apiUrl = "https://sheets.googleapis.com/v4/spreadsheets/{$this->spreadsheetId}/values/{$this->sheetName}?key={$this->apiKey}";
-
         try {
             $response = Http::get($apiUrl);
             if ($response->successful()) {
@@ -28,57 +24,78 @@ class ProjectController extends Controller
             }
             return null;
         } catch (\Exception $e) {
-            // Tangani error jika API tidak dapat diakses
             report($e);
             return null;
         }
     }
 
-    /**
-     * Menampilkan daftar semua data (halaman utama).
-     */
-    public function index(): View
+    // --- FUNGSI INDEX DIPERBARUI UNTUK MENERIMA REQUEST FILTER ---
+    public function index(Request $request): View
     {
         $data = $this->getSheetData();
         $header = [];
-        $rows = [];
+        $allRows = []; // Ganti nama variabel agar lebih jelas
         $datelList = [];
         $stoList = [];
-        $planCount = 0;
-        $progressCount = 0;
-        $doneCount = 0;
-
+        
         if ($data && isset($data['values']) && count($data['values']) > 1) {
             $header = array_shift($data['values']);
-            $rows = $data['values'];
+            $allRows = $data['values'];
 
             $datelIndex = array_search('DATEL', $header);
             $stoIndex = array_search('STO', $header);
-            $statusIndex = array_search('STATUS PEKERJAAN', $header);
 
+            // Ambil semua nilai unik dari kolom DATEL dan STO untuk filter dropdown
             if ($datelIndex !== false) {
-                $datelList = collect($rows)->pluck($datelIndex)->unique()->filter()->sort()->values();
+                $datelList = collect($allRows)->pluck($datelIndex)->unique()->filter()->sort()->values();
             }
             if ($stoIndex !== false) {
-                $stoList = collect($rows)->pluck($stoIndex)->unique()->filter()->sort()->values();
-            }
-            if ($statusIndex !== false) {
-                $statuses = collect($rows)->pluck($statusIndex);
-                $planCount = $statuses->filter(fn($value) => stripos($value, 'PLAN') !== false)->count();
-                $progressCount = $statuses->filter(fn($value) => stripos($value, 'PROGRESS') !== false)->count();
-                $doneCount = $statuses->filter(fn($value) => stripos($value, 'DONE') !== false)->count();
+                $stoList = collect($allRows)->pluck($stoIndex)->unique()->filter()->sort()->values();
             }
         }
 
-        return view('projects.index', compact(
-            'header', 'rows', 'datelList', 'stoList',
-            'planCount', 'progressCount', 'doneCount'
-        ));
+        // --- LOGIKA FILTER BARU ---
+        $selectedDatel = $request->query('datel');
+        $selectedSto = $request->query('sto');
+
+        $filteredRows = collect($allRows)->filter(function ($row) use ($header, $selectedDatel, $selectedSto) {
+            $datelIndex = array_search('DATEL', $header);
+            $stoIndex = array_search('STO', $header);
+
+            $datelMatch = !$selectedDatel || (isset($row[$datelIndex]) && $row[$datelIndex] == $selectedDatel);
+            $stoMatch = !$selectedSto || (isset($row[$stoIndex]) && $row[$stoIndex] == $selectedSto);
+            
+            return $datelMatch && $stoMatch;
+        })->values()->all();
+        // --- AKHIR LOGIKA FILTER ---
+
+
+        // Hitung status berdasarkan data yang sudah difilter
+        $statusIndex = array_search('STATUS PEKERJAAN', $header);
+        $planCount = 0;
+        $progressCount = 0;
+        $doneCount = 0;
+        if ($statusIndex !== false) {
+            $statuses = collect($filteredRows)->pluck($statusIndex);
+            $planCount = $statuses->filter(fn($value) => stripos($value, 'PLAN') !== false)->count();
+            $progressCount = $statuses->filter(fn($value) => stripos($value, 'PROGRESS') !== false)->count();
+            $doneCount = $statuses->filter(fn($value) => stripos($value, 'DONE') !== false)->count();
+        }
+
+        // Kirim data yang sudah difilter ke view
+        return view('projects.index', [
+            'header' => $header,
+            'rows' => $filteredRows, // Kirim data yang sudah difilter
+            'datelList' => $datelList,
+            'stoList' => $stoList,
+            'planCount' => $planCount,
+            'progressCount' => $progressCount,
+            'doneCount' => $doneCount,
+            'selectedDatel' => $selectedDatel, // Untuk menandai filter aktif
+            'selectedSto' => $selectedSto,     // Untuk menandai filter aktif
+        ]);
     }
 
-    /**
-     * Menampilkan detail satu data proyek.
-     */
     public function show($rowIndex): View
     {
         $data = $this->getSheetData();
@@ -93,11 +110,10 @@ class ProjectController extends Controller
 
                 foreach ($header as $index => $title) {
                     $value = $selectedRow[$index] ?? '';
-                    // === PERUBAHAN DI SINI: Mencari 'URL FOTO' bukan 'Path FOTO' ===
                     if (stripos($title, 'URL FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
                         $id = $matches[0] ?? count($galleryItems);
-                        if (!empty($value)) $galleryItems[$id]['url'] = $value; // Menggunakan key 'url'
+                        if (!empty($value)) $galleryItems[$id]['url'] = $value;
                     } elseif (stripos($title, 'Keterangan FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
                         $id = $matches[0] ?? count($galleryItems);
@@ -109,11 +125,8 @@ class ProjectController extends Controller
                 $groupedGallery = [];
                 $allPhotos = [];
                 foreach ($galleryItems as $item) {
-                    // === PERUBAHAN DI SINI: Mengecek key 'url' ===
                     if (empty($item['url'])) continue;
-                    
                     $allPhotos[] = $item;
-                    
                     if (empty($item['caption'])) continue;
                     
                     $captionParts = explode(' ', trim($item['caption']));
@@ -121,7 +134,7 @@ class ProjectController extends Controller
                     $displayCaption = implode(' ', array_slice($captionParts, 1));
                     
                     $groupedGallery[$groupName][] = [
-                        'url' => $item['url'], // Menggunakan key 'url'
+                        'url' => $item['url'],
                         'caption' => $displayCaption ?: $groupName
                     ];
                 }
@@ -133,9 +146,6 @@ class ProjectController extends Controller
         return view('projects.not-found');
     }
 
-    /**
-     * Menampilkan semua foto di halaman terpisah.
-     */
     public function showAllGallery($rowIndex): View
     {
         $data = $this->getSheetData();
@@ -151,11 +161,10 @@ class ProjectController extends Controller
 
                 foreach ($header as $index => $title) {
                     $value = $selectedRow[$index] ?? '';
-                     // === PERUBAHAN DI SINI: Mencari 'URL FOTO' bukan 'Path FOTO' ===
                     if (stripos($title, 'URL FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
                         $id = $matches[0] ?? count($galleryItems);
-                        if (!empty($value)) $galleryItems[$id]['url'] = $value; // Menggunakan key 'url'
+                        if (!empty($value)) $galleryItems[$id]['url'] = $value;
                     } elseif (stripos($title, 'Keterangan FOTO') !== false) {
                         preg_match('/\d+$/', $title, $matches);
                         $id = $matches[0] ?? count($galleryItems);
@@ -164,7 +173,7 @@ class ProjectController extends Controller
                 }
                 ksort($galleryItems);
                 
-                $galleryItems = array_filter($galleryItems, fn($item) => !empty($item['url'])); // Mengecek key 'url'
+                $galleryItems = array_filter($galleryItems, fn($item) => !empty($item['url']));
 
                 $groupedGallery = [];
                 foreach ($galleryItems as $item) {
@@ -175,7 +184,7 @@ class ProjectController extends Controller
                     $displayCaption = implode(' ', array_slice($captionParts, 1));
                     
                     $groupedGallery[$groupName][] = [
-                        'url' => $item['url'], // Menggunakan key 'url'
+                        'url' => $item['url'],
                         'caption' => $displayCaption ?: $groupName
                     ];
                 }

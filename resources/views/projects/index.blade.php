@@ -10,62 +10,59 @@
             <p>Data berikut diambil langsung dari Google Sheet API. Klik pada salah satu baris untuk melihat detail.</p>
         </div>
         <div class="header-right">
+            {{-- Search bar tidak diubah --}}
             <div class="search-bar">
                 <i data-feather="search" class="icon"></i>
-                <input type="text" placeholder="Cari data proyek...">
+                <input type="text" id="searchInput" placeholder="Cari data proyek...">
             </div>
-            <select class="filter-dropdown">
-                <option>Semua STO</option>
+            {{-- Dropdown STO --}}
+            <select class="filter-dropdown" id="stoFilter">
+                <option value="">Semua STO</option>
                 @foreach ($stoList as $sto)
-                    <option>{{ $sto }}</option>
+                    {{-- Tambahkan 'selected' jika STO ini yang sedang difilter --}}
+                    <option value="{{ $sto }}" {{ $selectedSto == $sto ? 'selected' : '' }}>
+                        {{ $sto }}
+                    </option>
                 @endforeach
             </select>
-            <select class="filter-dropdown">
-                <option>Semua Datel</option>
+            {{-- Dropdown Datel --}}
+            <select class="filter-dropdown" id="datelFilter">
+                <option value="">Semua Datel</option>
                 @foreach ($datelList as $datel)
-                    <option>{{ $datel }}</option>
+                     {{-- Tambahkan 'selected' jika Datel ini yang sedang difilter --}}
+                    <option value="{{ $datel }}" {{ $selectedDatel == $datel ? 'selected' : '' }}>
+                        {{ $datel }}
+                    </option>
                 @endforeach
             </select>
         </div>
     </div>
 
-    {{-- Summary Cards --}}
+    {{-- Summary Cards (tidak berubah) --}}
     <div class="summary-cards">
-        {{-- Total Proyek --}}
         <div class="card">
-            <div class="icon-container blue">
-                <i data-feather="briefcase"></i>
-            </div>
+            <div class="icon-container blue"><i data-feather="briefcase"></i></div>
             <div class="card-content">
                 <p class="value">{{ count($rows) }}</p>
                 <p class="label">Total Proyek</p>
             </div>
         </div>
-        {{-- Proyek Plan --}}
         <div class="card">
-            <div class="icon-container purple">
-                <i data-feather="list"></i>
-            </div>
+            <div class="icon-container purple"><i data-feather="list"></i></div>
             <div class="card-content">
                 <p class="value">{{ $planCount }}</p>
                 <p class="label">Proyek Plan</p>
             </div>
         </div>
-        {{-- Proyek Progress --}}
         <div class="card">
-            <div class="icon-container green">
-                <i data-feather="activity"></i>
-            </div>
+            <div class="icon-container green"><i data-feather="activity"></i></div>
             <div class="card-content">
                 <p class="value">{{ $progressCount }}</p>
                 <p class="label">Proyek Progress</p>
             </div>
         </div>
-        {{-- Proyek Done --}}
         <div class="card">
-            <div class="icon-container" style="background-color: rgba(245, 158, 11, 0.1); color: #F59E0B;">
-                <i data-feather="check-square"></i>
-            </div>
+            <div class="icon-container" style="background-color: rgba(245, 158, 11, 0.1); color: #F59E0B;"><i data-feather="check-square"></i></div>
             <div class="card-content">
                 <p class="value">{{ $doneCount }}</p>
                 <p class="label">Proyek Done</p>
@@ -73,29 +70,36 @@
         </div>
     </div>
 
-    {{-- Data Table --}}
+    {{-- Data Table (tidak berubah) --}}
     <div class="table-wrapper">
         <div class="table-header">
             <h2>Data Proyek ({{ count($rows) }} item)</h2>
         </div>
-        <table class="data-table">
+        <table class="data-table" id="projectTable">
             <thead>
                 <tr>
                     @php
-                        // Kolom yang ingin disembunyikan dari data asli
-                        $hiddenColumns = ['File ID', 'Path FOTO', 'STATUS', 'ALPRO', 'Keterangan FOTO', 'Link Google Maps'];
+                        $hiddenColumns = ['File ID', 'URL FOTO', 'Keterangan FOTO', 'Link Google Maps'];
                     @endphp
                     @foreach ($header as $col)
-                        @if (!in_array($col, $hiddenColumns))
+                        @php
+                            $isHidden = false;
+                            foreach ($hiddenColumns as $hidden) {
+                                if (stripos($col, $hidden) !== false) {
+                                    $isHidden = true;
+                                    break;
+                                }
+                            }
+                        @endphp
+                        @if (!$isHidden)
                             <th>{{ htmlspecialchars($col) }}</th>
                         @endif
                     @endforeach
-                    <th>Google Maps</th> {{-- Tambah header manual untuk link --}}
+                    <th>Google Maps</th>
                 </tr>
             </thead>
             <tbody>
                 @php
-                    // Cari index kolom Link Google Maps untuk mengambil datanya
                     $linkMapsIndex = array_search('Link Google Maps', $header);
                 @endphp
                 @forelse ($rows as $index => $row)
@@ -104,11 +108,19 @@
                     @endif
                     <tr class="data-row" data-row-index="{{ $index }}">
                         @foreach ($header as $colIndex => $colName)
-                            @if (!in_array($colName, $hiddenColumns))
+                             @php
+                                $isHidden = false;
+                                foreach ($hiddenColumns as $hidden) {
+                                    if (stripos($colName, $hidden) !== false) {
+                                        $isHidden = true;
+                                        break;
+                                    }
+                                }
+                            @endphp
+                            @if (!$isHidden)
                                 <td>{{ htmlspecialchars($row[$colIndex] ?? '') }}</td>
                             @endif
                         @endforeach
-                        {{-- Tambah sel untuk link Google Maps --}}
                         <td>
                             @if($linkMapsIndex !== false && !empty($row[$linkMapsIndex]))
                                 <a href="{{ $row[$linkMapsIndex] }}" target="_blank" class="google-maps-link">
@@ -133,18 +145,68 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    feather.replace(); // Pastikan ikon dirender ulang
+    feather.replace();
+    
+    // --- SCRIPT BARU UNTUK FILTER ---
+    const stoFilter = document.getElementById('stoFilter');
+    const datelFilter = document.getElementById('datelFilter');
+
+    function applyFilters() {
+        const selectedSto = stoFilter.value;
+        const selectedDatel = datelFilter.value;
+
+        // Membuat URL baru dengan parameter query
+        const url = new URL(window.location.href.split('?')[0]);
+        if (selectedSto) {
+            url.searchParams.set('sto', selectedSto);
+        }
+        if (selectedDatel) {
+            url.searchParams.set('datel', selectedDatel);
+        }
+        
+        // Memuat ulang halaman dengan URL filter
+        window.location.href = url.toString();
+    }
+
+    stoFilter.addEventListener('change', applyFilters);
+    datelFilter.addEventListener('change', applyFilters);
+    // --- AKHIR SCRIPT FILTER ---
+
+
+    // Script untuk klik baris (tidak berubah)
     const dataRows = document.querySelectorAll('.data-row');
     dataRows.forEach(row => {
         row.addEventListener('click', function(e) {
-            // Pastikan klik bukan pada link
-            if (e.target.closest('a')) {
-                return;
-            }
+            if (e.target.closest('a')) return;
             const rowIndex = this.getAttribute('data-row-index');
             window.location.href = `{{ url('/project') }}/${rowIndex}`;
         });
     });
+
+    // --- SCRIPT BARU UNTUK SEARCH ---
+    const searchInput = document.getElementById('searchInput');
+    const table = document.getElementById('projectTable');
+    const tableRows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+    searchInput.addEventListener('keyup', function() {
+        const filter = searchInput.value.toUpperCase();
+
+        for (let i = 0; i < tableRows.length; i++) {
+            let rowVisible = false;
+            const cells = tableRows[i].getElementsByTagName('td');
+            for (let j = 0; j < cells.length; j++) {
+                if (cells[j]) {
+                    const cellText = cells[j].textContent || cells[j].innerText;
+                    if (cellText.toUpperCase().indexOf(filter) > -1) {
+                        rowVisible = true;
+                        break;
+                    }
+                }
+            }
+            tableRows[i].style.display = rowVisible ? '' : 'none';
+        }
+    });
+     // --- AKHIR SCRIPT SEARCH ---
 });
 </script>
-@endpush    
+@endpush
