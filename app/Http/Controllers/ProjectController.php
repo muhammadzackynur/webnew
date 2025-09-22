@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
-use App\Services\GoogleSheetsService; // Pastikan ini ada
-use Maatwebsite\Excel\Facades\Excel; // Tambahkan untuk Excel
-use App\Exports\ProjectMaterialsExport; // Tambahkan untuk Export
+use App\Services\GoogleSheetsService;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ProjectMaterialsExport;
 
 class ProjectController extends Controller
 {
@@ -245,6 +245,20 @@ class ProjectController extends Controller
     }
     
     /**
+     * Menyediakan file template BoQ untuk diunduh.
+     */
+    public function downloadTemplate()
+    {
+        $path = storage_path('app/templates/BoQ.xlsx');
+
+        if (!file_exists($path)) {
+            return redirect()->back()->with('error', 'File template BoQ.xlsx tidak ditemukan.');
+        }
+
+        return response()->download($path, 'BoQ.xlsx');
+    }
+
+    /**
      * Meng-handle upload template Excel untuk material.
      */
     public function uploadMaterialExcel(Request $request, $rowIndex)
@@ -257,37 +271,45 @@ class ProjectController extends Controller
 
         try {
             $dataFromExcel = Excel::toArray(new \stdClass(), $request->file('material_excel'));
-            $materialRows = $dataFromExcel[0] ?? [];
-            $header = array_shift($materialRows);
+            $allRows = $dataFromExcel[0] ?? [];
+            
+            // Data material di template Anda dimulai dari baris ke-9 (indeks array 8)
+            $materialRows = array_slice($allRows, 8);
 
             $materialsToAppend = [];
             foreach ($materialRows as $row) {
-                if (empty(array_filter($row))) {
+                // Kolom VOL di template adalah kolom ke-7 (indeks array ke-6)
+                $volume = $row[6] ?? null;
+
+                // Lewati baris jika volume kosong, bukan angka, atau 0
+                if (empty($volume) || !is_numeric($volume) || floatval($volume) <= 0) {
                     continue;
                 }
+                
+                // Jika ada volume, proses baris ini
                 $materialsToAppend[] = [
                     'id_project_posjar' => $request->input('id_project_posjar'),
                     'lokasi_jalan'      => $request->input('lokasi_jalan'),
-                    'no'                => $row[0] ?? null,
-                    'jenis_material'    => $row[1] ?? null,
-                    'uraian_pekerjaan'  => $row[2] ?? null,
-                    'satuan'            => $row[3] ?? null,
-                    'volume'            => $row[4] ?? null,
+                    'no'                => $row[0] ?? '', // Kolom NO
+                    'jenis_material'    => $row[1] ?? '', // Kolom DESIGNATOR
+                    'uraian_pekerjaan'  => $row[2] ?? '', // Kolom URAIAN PEKERJAAN
+                    'satuan'            => $row[3] ?? '', // Kolom SATUAN
+                    'volume'            => $volume,       // Kolom VOL
                 ];
             }
 
             if (!empty($materialsToAppend)) {
                 $sheetsService = new GoogleSheetsService();
                 $sheetsService->appendMultipleMaterials($materialsToAppend);
+                $message = count($materialsToAppend) . ' data material berhasil diimpor!';
+                return redirect()->route('project.show', ['rowIndex' => $rowIndex])->with('success', $message);
             }
-
-            return redirect()->route('project.show', ['rowIndex' => $rowIndex])
-                             ->with('success', 'Data material dari Excel berhasil ditambahkan!');
+            
+            return redirect()->route('project.show', ['rowIndex' => $rowIndex])->with('error', 'Tidak ada data material dengan volume yang valid untuk diimpor.');
 
         } catch (\Exception $e) {
             report($e);
-            return redirect()->route('project.show', ['rowIndex' => $rowIndex])
-                             ->with('error', 'Gagal memproses file Excel: ' . $e->getMessage());
+            return redirect()->route('project.show', ['rowIndex' => $rowIndex])->with('error', 'Gagal memproses file Excel: ' . $e->getMessage());
         }
     }
 
