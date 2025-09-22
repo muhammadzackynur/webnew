@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
-use Illuminate\Support\Str;
+use App\Services\GoogleSheetsService; // Pastikan ini ada
 
 class ProjectController extends Controller
 {
@@ -13,10 +13,11 @@ class ProjectController extends Controller
     private $apiKey = 'AIzaSyC6lnm-I1v7-09PAeKvfkVcnUGiUx-ECvE'; // Ganti dengan API Key Anda
     private $spreadsheetId = '1DcneJQUGCp1NHXGI7LUlgAd53aBnOULY7w6xqT02dSk'; // Ganti dengan ID Spreadsheet Anda
     private $sheetName = 'Data';
+    private $materialSheetName = 'Data Material'; 
 
-    private function getSheetData()
+    private function getSheetData($sheet)
     {
-        $apiUrl = "https://sheets.googleapis.com/v4/spreadsheets/{$this->spreadsheetId}/values/{$this->sheetName}?key={$this->apiKey}";
+        $apiUrl = "https://sheets.googleapis.com/v4/spreadsheets/{$this->spreadsheetId}/values/{$sheet}?key={$this->apiKey}";
         try {
             $response = Http::get($apiUrl);
             if ($response->successful()) {
@@ -29,12 +30,11 @@ class ProjectController extends Controller
         }
     }
 
-    // --- FUNGSI INDEX DIPERBARUI UNTUK MENERIMA REQUEST FILTER ---
     public function index(Request $request): View
     {
-        $data = $this->getSheetData();
+        $data = $this->getSheetData($this->sheetName);
         $header = [];
-        $allRows = []; // Ganti nama variabel agar lebih jelas
+        $allRows = [];
         $datelList = [];
         $stoList = [];
         
@@ -45,7 +45,6 @@ class ProjectController extends Controller
             $datelIndex = array_search('DATEL', $header);
             $stoIndex = array_search('STO', $header);
 
-            // Ambil semua nilai unik dari kolom DATEL dan STO untuk filter dropdown
             if ($datelIndex !== false) {
                 $datelList = collect($allRows)->pluck($datelIndex)->unique()->filter()->sort()->values();
             }
@@ -54,7 +53,6 @@ class ProjectController extends Controller
             }
         }
 
-        // --- LOGIKA FILTER BARU ---
         $selectedDatel = $request->query('datel');
         $selectedSto = $request->query('sto');
 
@@ -67,10 +65,7 @@ class ProjectController extends Controller
             
             return $datelMatch && $stoMatch;
         })->values()->all();
-        // --- AKHIR LOGIKA FILTER ---
 
-
-        // Hitung status berdasarkan data yang sudah difilter
         $statusIndex = array_search('STATUS PEKERJAAN', $header);
         $planCount = 0;
         $progressCount = 0;
@@ -79,44 +74,63 @@ class ProjectController extends Controller
             $statuses = collect($filteredRows)->pluck($statusIndex);
             $planCount = $statuses->filter(fn($value) => stripos($value, 'PLAN') !== false)->count();
             $progressCount = $statuses->filter(fn($value) => stripos($value, 'PROGRESS') !== false)->count();
-            $doneCount = $statuses->filter(fn($value) => stripos($value, 'DONE') !== false)->count();
+            $doneCount = $statuses->filter(fn($value) => stripos($value, 'CLOSE') !== false)->count();
         }
 
-        // Kirim data yang sudah difilter ke view
         return view('projects.index', [
             'header' => $header,
-            'rows' => $filteredRows, // Kirim data yang sudah difilter
+            'rows' => $filteredRows,
             'datelList' => $datelList,
             'stoList' => $stoList,
             'planCount' => $planCount,
             'progressCount' => $progressCount,
             'doneCount' => $doneCount,
-            'selectedDatel' => $selectedDatel, // Untuk menandai filter aktif
-            'selectedSto' => $selectedSto,     // Untuk menandai filter aktif
+            'selectedDatel' => $selectedDatel,
+            'selectedSto' => $selectedSto,
         ]);
     }
 
     public function show($rowIndex): View
     {
-        $data = $this->getSheetData();
+        $projectData = $this->getSheetData($this->sheetName);
+        $materialData = $this->getSheetData($this->materialSheetName);
 
-        if ($data && isset($data['values'])) {
-            $header = array_shift($data['values']);
-            $allRows = $data['values'];
+        if ($projectData && isset($projectData['values'])) {
+            $projectHeader = array_shift($projectData['values']);
+            $allProjectRows = $projectData['values'];
 
-            if (isset($allRows[$rowIndex])) {
-                $selectedRow = $allRows[$rowIndex];
+            if (isset($allProjectRows[$rowIndex])) {
+                $selectedRow = $allProjectRows[$rowIndex];
+                
+                $projectLocationIndex = array_search('LOKASI/JALAN', $projectHeader);
+                $currentProjectLocation = $selectedRow[$projectLocationIndex] ?? null;
+
+                $projectMaterials = [];
+                if ($materialData && isset($materialData['values']) && $currentProjectLocation) {
+                    $materialHeader = array_shift($materialData['values']);
+                    $allMaterialRows = $materialData['values'];
+                    
+                    $materialLocationIndex = array_search('LOKASI/JALAN', $materialHeader);
+                    
+                    if ($materialLocationIndex !== false) {
+                        $projectMaterials = collect($allMaterialRows)->filter(function ($row) use ($materialLocationIndex, $currentProjectLocation) {
+                            return isset($row[$materialLocationIndex]) && $row[$materialLocationIndex] === $currentProjectLocation;
+                        })->map(function ($row) use ($materialHeader) {
+                            return array_combine($materialHeader, array_pad($row, count($materialHeader), ''));
+                        })->values()->all();
+                    }
+                }
+
                 $galleryItems = [];
-
-                foreach ($header as $index => $title) {
+                foreach ($projectHeader as $index => $title) {
                     $value = $selectedRow[$index] ?? '';
                     if (stripos($title, 'URL FOTO') !== false) {
-                        preg_match('/\d+$/', $title, $matches);
-                        $id = $matches[0] ?? count($galleryItems);
+                        preg_match('/(\d+)$/', $title, $matches);
+                        $id = $matches[1] ?? count($galleryItems);
                         if (!empty($value)) $galleryItems[$id]['url'] = $value;
                     } elseif (stripos($title, 'Keterangan FOTO') !== false) {
-                        preg_match('/\d+$/', $title, $matches);
-                        $id = $matches[0] ?? count($galleryItems);
+                        preg_match('/(\d+)$/', $title, $matches);
+                        $id = $matches[1] ?? count($galleryItems);
                         $galleryItems[$id]['caption'] = $value;
                     }
                 }
@@ -139,7 +153,14 @@ class ProjectController extends Controller
                     ];
                 }
 
-                return view('projects.detail', compact('header', 'selectedRow', 'groupedGallery', 'allPhotos', 'rowIndex'));
+                return view('projects.detail', [
+                    'header' => $projectHeader,
+                    'selectedRow' => $selectedRow,
+                    'groupedGallery' => $groupedGallery,
+                    'allPhotos' => $allPhotos,
+                    'rowIndex' => $rowIndex,
+                    'projectMaterials' => $projectMaterials
+                ]);
             }
         }
 
@@ -148,7 +169,7 @@ class ProjectController extends Controller
 
     public function showAllGallery($rowIndex): View
     {
-        $data = $this->getSheetData();
+        $data = $this->getSheetData($this->sheetName);
         $title = "Semua Foto Proyek";
 
         if ($data && isset($data['values'])) {
@@ -193,5 +214,36 @@ class ProjectController extends Controller
             }
         }
         return view('projects.not-found');
+    }
+
+    // FUNGSI BARU UNTUK MENAMBAHKAN MATERIAL
+    public function addMaterial(Request $request, $rowIndex)
+    {
+        // 1. Validasi input dari form
+        $validated = $request->validate([
+            'id_project_posjar' => 'required|string',
+            'lokasi_jalan'      => 'required|string',
+            'no'                => 'required|string',
+            'jenis_material'    => 'required|string',
+            'uraian_pekerjaan'  => 'required|string',
+            'satuan'            => 'required|string',
+            'volume'            => 'required|numeric',
+        ]);
+
+        try {
+            // 2. Panggil service untuk menulis ke Google Sheet
+            $sheetsService = new GoogleSheetsService();
+            $sheetsService->appendMaterial($validated);
+
+            // 3. Kembali ke halaman detail dengan pesan sukses
+            return redirect()->route('project.show', ['rowIndex' => $rowIndex])
+                             ->with('success', 'Material berhasil ditambahkan!');
+
+        } catch (\Exception $e) {
+            // Jika gagal, kembali dengan pesan error
+            report($e);
+            return redirect()->route('project.show', ['rowIndex' => $rowIndex])
+                             ->with('error', 'Gagal menambahkan material: ' . $e->getMessage());
+        }
     }
 }
