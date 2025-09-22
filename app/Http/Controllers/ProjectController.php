@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 use App\Services\GoogleSheetsService; // Pastikan ini ada
+use Maatwebsite\Excel\Facades\Excel; // Tambahkan untuk Excel
+use App\Exports\ProjectMaterialsExport; // Tambahkan untuk Export
 
 class ProjectController extends Controller
 {
@@ -216,10 +218,8 @@ class ProjectController extends Controller
         return view('projects.not-found');
     }
 
-    // FUNGSI BARU UNTUK MENAMBAHKAN MATERIAL
     public function addMaterial(Request $request, $rowIndex)
     {
-        // 1. Validasi input dari form
         $validated = $request->validate([
             'id_project_posjar' => 'required|string',
             'lokasi_jalan'      => 'required|string',
@@ -231,19 +231,100 @@ class ProjectController extends Controller
         ]);
 
         try {
-            // 2. Panggil service untuk menulis ke Google Sheet
             $sheetsService = new GoogleSheetsService();
             $sheetsService->appendMaterial($validated);
 
-            // 3. Kembali ke halaman detail dengan pesan sukses
             return redirect()->route('project.show', ['rowIndex' => $rowIndex])
                              ->with('success', 'Material berhasil ditambahkan!');
 
         } catch (\Exception $e) {
-            // Jika gagal, kembali dengan pesan error
             report($e);
             return redirect()->route('project.show', ['rowIndex' => $rowIndex])
                              ->with('error', 'Gagal menambahkan material: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Meng-handle upload template Excel untuk material.
+     */
+    public function uploadMaterialExcel(Request $request, $rowIndex)
+    {
+        $request->validate([
+            'material_excel' => 'required|mimes:xlsx,xls',
+            'id_project_posjar' => 'required|string',
+            'lokasi_jalan' => 'required|string',
+        ]);
+
+        try {
+            $dataFromExcel = Excel::toArray(new \stdClass(), $request->file('material_excel'));
+            $materialRows = $dataFromExcel[0] ?? [];
+            $header = array_shift($materialRows);
+
+            $materialsToAppend = [];
+            foreach ($materialRows as $row) {
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+                $materialsToAppend[] = [
+                    'id_project_posjar' => $request->input('id_project_posjar'),
+                    'lokasi_jalan'      => $request->input('lokasi_jalan'),
+                    'no'                => $row[0] ?? null,
+                    'jenis_material'    => $row[1] ?? null,
+                    'uraian_pekerjaan'  => $row[2] ?? null,
+                    'satuan'            => $row[3] ?? null,
+                    'volume'            => $row[4] ?? null,
+                ];
+            }
+
+            if (!empty($materialsToAppend)) {
+                $sheetsService = new GoogleSheetsService();
+                $sheetsService->appendMultipleMaterials($materialsToAppend);
+            }
+
+            return redirect()->route('project.show', ['rowIndex' => $rowIndex])
+                             ->with('success', 'Data material dari Excel berhasil ditambahkan!');
+
+        } catch (\Exception $e) {
+            report($e);
+            return redirect()->route('project.show', ['rowIndex' => $rowIndex])
+                             ->with('error', 'Gagal memproses file Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Mengekspor data material ke file Excel.
+     */
+    public function exportMaterial($rowIndex)
+    {
+        $projectData = $this->getSheetData($this->sheetName);
+        $materialData = $this->getSheetData($this->materialSheetName);
+
+        $projectHeader = array_shift($projectData['values']);
+        $selectedRow = $projectData['values'][$rowIndex];
+
+        $projectLocationIndex = array_search('LOKASI/JALAN', $projectHeader);
+        $currentProjectLocation = $selectedRow[$projectLocationIndex] ?? null;
+
+        $projectMaterials = [];
+        if ($materialData && isset($materialData['values']) && $currentProjectLocation) {
+            $materialHeader = array_shift($materialData['values']);
+            $materialLocationIndex = array_search('LOKASI/JALAN', $materialHeader);
+            
+            if ($materialLocationIndex !== false) {
+                $projectMaterials = collect($materialData['values'])->filter(function ($row) use ($materialLocationIndex, $currentProjectLocation) {
+                    return isset($row[$materialLocationIndex]) && $row[$materialLocationIndex] === $currentProjectLocation;
+                })->map(function ($row) use ($materialHeader) {
+                    return array_combine($materialHeader, array_pad($row, count($materialHeader), ''));
+                })->values()->all();
+            }
+        }
+
+        if (empty($projectMaterials)) {
+            return redirect()->back()->with('error', 'Tidak ada data material untuk di-export.');
+        }
+
+        $fileName = 'material_' . str_replace(['/', '\\', ' '], '_', $currentProjectLocation) . '.xlsx';
+
+        return Excel::download(new ProjectMaterialsExport($projectMaterials), $fileName);
     }
 }

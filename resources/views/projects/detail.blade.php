@@ -22,7 +22,7 @@
 <div class="detail-container">
     {{-- Kolom Informasi Teks --}}
     <div class="info-column">
-        {{-- Menampilkan pesan sukses atau error setelah tambah material --}}
+        {{-- Menampilkan pesan sukses atau error --}}
         @if (session('success'))
             <div class="alert alert-success" style="background-color: #D1FAE5; color: #065F46; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
                 {{ session('success') }}
@@ -65,14 +65,38 @@
                     <i data-feather="tool" style="width:20px; height:20px; margin-right: 8px;"></i>
                     Penggunaan Material
                 </h3>
-                {{-- Tombol untuk Membuka Form Tambah Material --}}
-                <button type="button" class="view-all-link" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
-                    + Tambah Material
-                </button>
+                <div class="d-flex gap-2">
+                    {{-- Tombol Modal Tambah Manual --}}
+                    <button type="button" class="view-all-link" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
+                        + Tambah Material
+                    </button>
+                    {{-- Tombol Export Excel --}}
+                    <a href="{{ route('project.exportMaterial', ['rowIndex' => $rowIndex]) }}" class="btn btn-success d-flex align-items-center gap-2">
+                        <i data-feather="download" style="width:16px; height:16px;"></i>
+                        Export Excel
+                    </a>
+                </div>
+            </div>
+
+            {{-- Form Upload Template Excel --}}
+            <div style="border-top: 1px solid #e5e7eb; margin-top: 1.5rem; padding-top: 1.5rem;">
+                <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Upload via Template Excel</h4>
+                <p style="font-size: 0.875rem; color: #6B7280; margin-bottom: 1rem;">
+                    Gunakan template untuk menambahkan beberapa material sekaligus.
+                </p>
+                <form action="{{ route('project.uploadMaterialExcel', ['rowIndex' => $rowIndex]) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <input type="hidden" name="id_project_posjar" value="{{ $selectedRow[array_search('ID PROJECT POSJAR', $header)] ?? '' }}">
+                    <input type="hidden" name="lokasi_jalan" value="{{ $selectedRow[array_search('LOKASI/JALAN', $header)] ?? '' }}">
+                    <div class="input-group">
+                        <input type="file" class="form-control" name="material_excel" required accept=".xlsx, .xls">
+                        <button class="btn btn-primary" type="submit">Upload File</button>
+                    </div>
+                </form>
             </div>
             
             @if (!empty($projectMaterials))
-                <table class="data-table" style="margin-top: 1rem;">
+                <table class="data-table" style="margin-top: 1.5rem;">
                     <thead>
                         <tr>
                             <th>No</th>
@@ -95,7 +119,7 @@
                     </tbody>
                 </table>
             @else
-                <p style="padding: 1rem 0;">Belum ada data material untuk proyek ini.</p>
+                <p style="padding: 1.5rem 0; text-align: center;">Belum ada data material untuk proyek ini.</p>
             @endif
         </div>
     </div>

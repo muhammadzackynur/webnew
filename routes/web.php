@@ -13,3 +13,5 @@ Route::get('/project/{rowIndex}', [ProjectController::class, 'show'])->name('pro
 Route::get('/project/{rowIndex}/gallery', [ProjectController::class, 'showAllGallery'])->name('project.gallery');
 
 Route::post('/project/{rowIndex}/add-material', [ProjectController::class, 'addMaterial'])->name('project.addMaterial');
+
+Route::get('/project/{rowIndex}/export-material', [ProjectController::class, 'exportMaterial'])->name('project.exportMaterial');
