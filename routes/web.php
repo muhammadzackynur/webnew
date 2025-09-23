@@ -23,3 +23,4 @@ Route::get('/project/{rowIndex}/export-material', [ProjectController::class, 'ex
 
 // Rute untuk download template material
 Route::get('/project/download-template', [ProjectController::class, 'downloadTemplate'])->name('project.downloadTemplate');
+
