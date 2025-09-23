@@ -35,14 +35,21 @@ class ProjectMaterialsExport implements FromCollection, WithHeadings, WithMappin
         ];
     }
 
+    /**
+     * @param mixed $material
+     * @return array
+     */
     public function map($material): array
     {
+        // ## KODE YANG DIPERBAIKI ADA DI BAWAH INI ##
+        // Menggunakan kunci yang benar sesuai dengan data yang dikirim dari controller
+        // dan sesuai dengan header di Google Sheet.
         return [
-            $material['No'] ?? '',
-            $material['Jenis Material'] ?? '',
+            $material['No'] ?? $material['NO'] ?? '',
+            $material['Jenis Material'] ?? $material['DESIGNATOR'] ?? '', // Diperbaiki: Mencari 'Jenis Material' atau 'DESIGNATOR'
             $material['Uraian Pekerjaan'] ?? '',
             $material['Satuan'] ?? '',
-            $material['Volume'] ?? '',
+            $material['Volume'] ?? $material['VOL'] ?? '', // Diperbaiki: Mencari 'Volume' atau 'VOL'
         ];
     }
 

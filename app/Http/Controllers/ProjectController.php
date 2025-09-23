@@ -244,9 +244,6 @@ class ProjectController extends Controller
         }
     }
     
-    /**
-     * Menyediakan file template BoQ untuk diunduh.
-     */
     public function downloadTemplate()
     {
         $path = storage_path('app/templates/BoQ.xlsx');
@@ -258,9 +255,6 @@ class ProjectController extends Controller
         return response()->download($path, 'BoQ.xlsx');
     }
 
-    /**
-     * Meng-handle upload template Excel untuk material.
-     */
     public function uploadMaterialExcel(Request $request, $rowIndex)
     {
         $request->validate([
@@ -273,34 +267,36 @@ class ProjectController extends Controller
             $dataFromExcel = Excel::toArray(new \stdClass(), $request->file('material_excel'));
             $allRows = $dataFromExcel[0] ?? [];
             
-            // Data material di template Anda dimulai dari baris ke-9 (indeks array 8)
             $materialRows = array_slice($allRows, 8);
 
             $materialsToAppend = [];
             foreach ($materialRows as $row) {
-                // Kolom VOL di template adalah kolom ke-7 (indeks array ke-6)
                 $volume = $row[6] ?? null;
 
-                // Lewati baris jika volume kosong, bukan angka, atau 0
                 if (empty($volume) || !is_numeric($volume) || floatval($volume) <= 0) {
                     continue;
                 }
                 
-                // Jika ada volume, proses baris ini
                 $materialsToAppend[] = [
                     'id_project_posjar' => $request->input('id_project_posjar'),
                     'lokasi_jalan'      => $request->input('lokasi_jalan'),
-                    'no'                => $row[0] ?? '', // Kolom NO
-                    'jenis_material'    => $row[1] ?? '', // Kolom DESIGNATOR
-                    'uraian_pekerjaan'  => $row[2] ?? '', // Kolom URAIAN PEKERJAAN
-                    'satuan'            => $row[3] ?? '', // Kolom SATUAN
-                    'volume'            => $volume,       // Kolom VOL
+                    'no'                => $row[0] ?? '',
+                    'jenis_material'    => $row[1] ?? '',
+                    'uraian_pekerjaan'  => $row[2] ?? '',
+                    'satuan'            => $row[3] ?? '',
+                    'volume'            => $volume,
                 ];
             }
 
             if (!empty($materialsToAppend)) {
                 $sheetsService = new GoogleSheetsService();
-                $sheetsService->appendMultipleMaterials($materialsToAppend);
+                // Perhatikan: Method appendMultipleMaterials() tidak ada di GoogleSheetsService Anda.
+                // Anda harus membuatnya terlebih dahulu jika ingin fungsi ini bekerja.
+                // Untuk sementara, kita bisa memanggil appendMaterial berulang kali.
+                foreach ($materialsToAppend as $material) {
+                    $sheetsService->appendMaterial($material);
+                }
+                
                 $message = count($materialsToAppend) . ' data material berhasil diimpor!';
                 return redirect()->route('project.show', ['rowIndex' => $rowIndex])->with('success', $message);
             }
@@ -315,38 +311,64 @@ class ProjectController extends Controller
 
     /**
      * Mengekspor data material ke file Excel.
+     * INI ADALAH FUNGSI YANG DIPERBAIKI
      */
     public function exportMaterial($rowIndex)
     {
-        $projectData = $this->getSheetData($this->sheetName);
-        $materialData = $this->getSheetData($this->materialSheetName);
+        try {
+            $projectData = $this->getSheetData($this->sheetName);
+            $materialData = $this->getSheetData($this->materialSheetName);
 
-        $projectHeader = array_shift($projectData['values']);
-        $selectedRow = $projectData['values'][$rowIndex];
-
-        $projectLocationIndex = array_search('LOKASI/JALAN', $projectHeader);
-        $currentProjectLocation = $selectedRow[$projectLocationIndex] ?? null;
-
-        $projectMaterials = [];
-        if ($materialData && isset($materialData['values']) && $currentProjectLocation) {
-            $materialHeader = array_shift($materialData['values']);
-            $materialLocationIndex = array_search('LOKASI/JALAN', $materialHeader);
-            
-            if ($materialLocationIndex !== false) {
-                $projectMaterials = collect($materialData['values'])->filter(function ($row) use ($materialLocationIndex, $currentProjectLocation) {
-                    return isset($row[$materialLocationIndex]) && $row[$materialLocationIndex] === $currentProjectLocation;
-                })->map(function ($row) use ($materialHeader) {
-                    return array_combine($materialHeader, array_pad($row, count($materialHeader), ''));
-                })->values()->all();
+            // Validasi 1: Pastikan data proyek berhasil diambil
+            if (!$projectData || !isset($projectData['values']) || count($projectData['values']) <= 1) {
+                return redirect()->back()->with('error', 'Gagal mengambil data proyek dari Google Sheet.');
             }
+
+            $projectHeader = array_shift($projectData['values']);
+            $allProjectRows = $projectData['values'];
+
+            // Validasi 2: Pastikan rowIndex yang diminta valid
+            if (!isset($allProjectRows[$rowIndex])) {
+                return redirect()->back()->with('error', 'Data proyek tidak ditemukan.');
+            }
+            $selectedRow = $allProjectRows[$rowIndex];
+
+            $projectLocationIndex = array_search('LOKASI/JALAN', $projectHeader);
+            $currentProjectLocation = $selectedRow[$projectLocationIndex] ?? null;
+
+            if (!$currentProjectLocation) {
+                return redirect()->back()->with('error', 'Lokasi proyek tidak ditemukan untuk proyek ini.');
+            }
+
+            $projectMaterials = [];
+            // Validasi 3: Pastikan data material berhasil diambil
+            if ($materialData && isset($materialData['values']) && count($materialData['values']) > 1) {
+                $materialHeader = array_shift($materialData['values']);
+                $materialLocationIndex = array_search('LOKASI/JALAN', $materialHeader);
+                
+                if ($materialLocationIndex !== false) {
+                    $projectMaterials = collect($materialData['values'])->filter(function ($row) use ($materialLocationIndex, $currentProjectLocation) {
+                        return isset($row[$materialLocationIndex]) && $row[$materialLocationIndex] === $currentProjectLocation;
+                    })->map(function ($row) use ($materialHeader) {
+                        // Pastikan jumlah elemen $row sama dengan $materialHeader
+                        $paddedRow = array_pad($row, count($materialHeader), '');
+                        return array_combine($materialHeader, $paddedRow);
+                    })->values()->all();
+                }
+            }
+
+            if (empty($projectMaterials)) {
+                return redirect()->back()->with('error', 'Tidak ada data material untuk di-export pada proyek ini.');
+            }
+
+            $fileName = 'material_' . str_replace(['/', '\\', ' '], '_', $currentProjectLocation) . '.xlsx';
+
+            return Excel::download(new ProjectMaterialsExport($projectMaterials), $fileName);
+
+        } catch (\Exception $e) {
+            // Tangkap semua jenis error dan kembalikan pesan yang jelas
+            report($e);
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memproses ekspor: ' . $e->getMessage());
         }
-
-        if (empty($projectMaterials)) {
-            return redirect()->back()->with('error', 'Tidak ada data material untuk di-export.');
-        }
-
-        $fileName = 'material_' . str_replace(['/', '\\', ' '], '_', $currentProjectLocation) . '.xlsx';
-
-        return Excel::download(new ProjectMaterialsExport($projectMaterials), $fileName);
     }
 }
