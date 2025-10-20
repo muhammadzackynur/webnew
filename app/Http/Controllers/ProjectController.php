@@ -5,9 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
 use App\Services\GoogleSheetsService;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\ProjectMaterialsExport;
+
+// ----- TAMBAHKAN/PASTIKAN USE STATEMENT INI ADA -----
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+// ---------------------------------------------
 
 class ProjectController extends Controller
 {
@@ -15,7 +21,7 @@ class ProjectController extends Controller
     private $apiKey = 'AIzaSyC6lnm-I1v7-09PAeKvfkVcnUGiUx-ECvE'; // Ganti dengan API Key Anda
     private $spreadsheetId = '1DcneJQUGCp1NHXGI7LUlgAd53aBnOULY7w6xqT02dSk'; // Ganti dengan ID Spreadsheet Anda
     private $sheetName = 'Data';
-    private $materialSheetName = 'Data Material'; 
+    private $materialSheetName = 'Data Material';
 
     private function getSheetData($sheet)
     {
@@ -31,6 +37,42 @@ class ProjectController extends Controller
             return null;
         }
     }
+
+    /**
+     * ### FUNGSI BARU ###
+     * Fungsi ini membaca template BoQ.xlsx dan mengubahnya menjadi data JSON
+     * untuk digunakan oleh JavaScript di halaman detail.
+     */
+    private function getBoQDataAsJson()
+    {
+        $templatePath = storage_path('app/templates/BoQ.xlsx');
+        if (!file_exists($templatePath)) {
+            return json_encode([]); // Kembalikan JSON kosong jika file tidak ada
+        }
+
+        $spreadsheet = IOFactory::load($templatePath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $boqData = [];
+        $startRow = 9; // Data material di template dimulai dari baris 9
+        $lastRow = $sheet->getHighestRow();
+
+        for ($row = $startRow; $row <= $lastRow; $row++) {
+            $designator = $sheet->getCell('B' . $row)->getValue();
+            $uraian = $sheet->getCell('C' . $row)->getValue();
+            $satuan = $sheet->getCell('D' . $row)->getValue();
+
+            if ($designator) {
+                $boqData[trim($designator)] = [
+                    'uraian' => trim($uraian),
+                    'satuan' => trim($satuan),
+                ];
+            }
+        }
+
+        return json_encode($boqData);
+    }
+
 
     public function index(Request $request): View
     {
@@ -92,10 +134,15 @@ class ProjectController extends Controller
         ]);
     }
 
+    /**
+     * ### FUNGSI SHOW YANG DIPERBARUI ###
+     * Fungsi ini sekarang juga mengirimkan data dari BoQ ke view.
+     */
     public function show($rowIndex): View
     {
         $projectData = $this->getSheetData($this->sheetName);
         $materialData = $this->getSheetData($this->materialSheetName);
+        $boqJsonData = $this->getBoQDataAsJson(); // Memanggil fungsi baru
 
         if ($projectData && isset($projectData['values'])) {
             $projectHeader = array_shift($projectData['values']);
@@ -161,7 +208,8 @@ class ProjectController extends Controller
                     'groupedGallery' => $groupedGallery,
                     'allPhotos' => $allPhotos,
                     'rowIndex' => $rowIndex,
-                    'projectMaterials' => $projectMaterials
+                    'projectMaterials' => $projectMaterials,
+                    'boqData' => $boqJsonData, // <-- DATA BARU DIKIRIM KE VIEW
                 ]);
             }
         }
@@ -290,9 +338,6 @@ class ProjectController extends Controller
 
             if (!empty($materialsToAppend)) {
                 $sheetsService = new GoogleSheetsService();
-                // Perhatikan: Method appendMultipleMaterials() tidak ada di GoogleSheetsService Anda.
-                // Anda harus membuatnya terlebih dahulu jika ingin fungsi ini bekerja.
-                // Untuk sementara, kita bisa memanggil appendMaterial berulang kali.
                 foreach ($materialsToAppend as $material) {
                     $sheetsService->appendMaterial($material);
                 }
@@ -308,67 +353,89 @@ class ProjectController extends Controller
             return redirect()->route('project.show', ['rowIndex' => $rowIndex])->with('error', 'Gagal memproses file Excel: ' . $e->getMessage());
         }
     }
-
-    /**
-     * Mengekspor data material ke file Excel.
-     * INI ADALAH FUNGSI YANG DIPERBAIKI
-     */
+    
     public function exportMaterial($rowIndex)
     {
         try {
+            $templatePath = storage_path('app/templates/BoQ.xlsx');
+            if (!file_exists($templatePath)) {
+                return redirect()->back()->with('error', 'File template BoQ.xlsx tidak ditemukan di server.');
+            }
+
             $projectData = $this->getSheetData($this->sheetName);
             $materialData = $this->getSheetData($this->materialSheetName);
 
-            // Validasi 1: Pastikan data proyek berhasil diambil
             if (!$projectData || !isset($projectData['values']) || count($projectData['values']) <= 1) {
                 return redirect()->back()->with('error', 'Gagal mengambil data proyek dari Google Sheet.');
             }
+            $projectHeader = $projectData['values'][0];
+            $allProjectRows = array_slice($projectData['values'], 1); 
 
-            $projectHeader = array_shift($projectData['values']);
-            $allProjectRows = $projectData['values'];
-
-            // Validasi 2: Pastikan rowIndex yang diminta valid
             if (!isset($allProjectRows[$rowIndex])) {
                 return redirect()->back()->with('error', 'Data proyek tidak ditemukan.');
             }
             $selectedRow = $allProjectRows[$rowIndex];
-
+            
             $projectLocationIndex = array_search('LOKASI/JALAN', $projectHeader);
             $currentProjectLocation = $selectedRow[$projectLocationIndex] ?? null;
-
             if (!$currentProjectLocation) {
-                return redirect()->back()->with('error', 'Lokasi proyek tidak ditemukan untuk proyek ini.');
+                return redirect()->back()->with('error', 'Lokasi proyek tidak ditemukan.');
             }
-
+            
             $projectMaterials = [];
-            // Validasi 3: Pastikan data material berhasil diambil
             if ($materialData && isset($materialData['values']) && count($materialData['values']) > 1) {
                 $materialHeader = array_shift($materialData['values']);
                 $materialLocationIndex = array_search('LOKASI/JALAN', $materialHeader);
                 
                 if ($materialLocationIndex !== false) {
                     $projectMaterials = collect($materialData['values'])->filter(function ($row) use ($materialLocationIndex, $currentProjectLocation) {
-                        return isset($row[$materialLocationIndex]) && $row[$materialLocationIndex] === $currentProjectLocation;
-                    })->map(function ($row) use ($materialHeader) {
-                        // Pastikan jumlah elemen $row sama dengan $materialHeader
-                        $paddedRow = array_pad($row, count($materialHeader), '');
-                        return array_combine($materialHeader, $paddedRow);
-                    })->values()->all();
+                        return isset($row[$materialLocationIndex]) && trim($row[$materialLocationIndex]) === trim($currentProjectLocation);
+                    })->mapWithKeys(function ($row) use ($materialHeader) {
+                        $combined = array_combine($materialHeader, array_pad($row, count($materialHeader), ''));
+                        $designator = $combined['DESIGNATOR'] ?? $combined['Jenis Material'] ?? null;
+                        $volume = $combined['VOL'] ?? $combined['Volume'] ?? 0;
+                        if ($designator) {
+                            return [trim($designator) => $volume];
+                        }
+                        return [];
+                    })->toArray();
+                }
+            }
+            
+            if (empty($projectMaterials)) {
+                return redirect()->route('project.show', ['rowIndex' => $rowIndex])->with('error', 'Tidak ada data material untuk diekspor pada proyek ini.');
+            }
+
+            $spreadsheet = IOFactory::load($templatePath);
+            $sheet = $spreadsheet->getActiveSheet();
+            
+            $startRow = 9;
+            $lastRow = $sheet->getHighestRow();
+
+            for ($row = $startRow; $row <= $lastRow; $row++) {
+                $designatorValue = $sheet->getCell('B' . $row)->getValue();
+                if ($designatorValue && isset($projectMaterials[trim($designatorValue)])) {
+                    $volume = $projectMaterials[trim($designatorValue)];
+                    $sheet->setCellValue('G' . $row, $volume);
                 }
             }
 
-            if (empty($projectMaterials)) {
-                return redirect()->back()->with('error', 'Tidak ada data material untuk di-export pada proyek ini.');
-            }
+            $writer = new Xlsx($spreadsheet);
+            $fileName = 'BoQ_' . Str::slug($currentProjectLocation, '_') . '.xlsx';
 
-            $fileName = 'material_' . str_replace(['/', '\\', ' '], '_', $currentProjectLocation) . '.xlsx';
+            $response = new StreamedResponse(function () use ($writer) {
+                $writer->save('php://output');
+            });
 
-            return Excel::download(new ProjectMaterialsExport($projectMaterials), $fileName);
+            $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            $response->headers->set('Content-Disposition', 'attachment;filename="' . $fileName . '"');
+            $response->headers->set('Cache-Control', 'max-age=0');
+
+            return $response;
 
         } catch (\Exception $e) {
-            // Tangkap semua jenis error dan kembalikan pesan yang jelas
             report($e);
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat memproses ekspor: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat membuat file Excel: ' . $e->getMessage());
         }
     }
 }

@@ -2,6 +2,30 @@
 
 @section('title', 'Detail Data Proyek')
 
+@push('styles')
+{{-- ### CSS UNTUK MEMPERBAIKI TABEL ### --}}
+<style>
+    .table-responsive {
+        overflow-x: auto; /* Tambahkan scroll horizontal jika benar-benar diperlukan */
+    }
+    .data-table {
+        table-layout: fixed; /* Paksa tabel untuk mematuhi lebar yang ditentukan */
+        width: 100%; /* Pastikan tabel menggunakan lebar penuh container */
+    }
+    .data-table th,
+    .data-table td {
+        word-wrap: break-word; /* Memaksa teks untuk patah dan turun baris */
+        vertical-align: top; /* Jaga agar konten selaras di bagian atas */
+    }
+    /* Atur lebar spesifik untuk setiap kolom agar rapi */
+    .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 5%; }  /* No */
+    .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 20%; } /* Jenis Material */
+    .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 45%; } /* Uraian Pekerjaan (paling lebar) */
+    .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 15%; } /* Satuan */
+    .data-table th:nth-child(5), .data-table td:nth-child(5) { width: 15%; } /* Volume */
+</style>
+@endpush
+
 @section('content')
 {{-- Header Halaman Khusus Detail --}}
 <div class="page-header">
@@ -66,14 +90,10 @@
                     Penggunaan Material
                 </h3>
                 <div class="d-flex gap-2">
-                    {{-- Tombol Modal Tambah Manual --}}
-                    <button type="button" class="view-all-link" data-bs-toggle="modal" data-bs-target="#addMaterialModal">
-                        + Tambah Material
-                    </button>
                     {{-- Tombol Export Excel --}}
                     <a href="{{ route('project.exportMaterial', ['rowIndex' => $rowIndex]) }}" class="btn btn-success d-flex align-items-center gap-2">
                         <i data-feather="download" style="width:16px; height:16px;"></i>
-                        Export Excel
+                        Export BoQ
                     </a>
                 </div>
             </div>
@@ -95,32 +115,73 @@
                 </form>
             </div>
             
+            {{-- Tabel Material yang Sudah Ada (DENGAN PERBAIKAN) --}}
             @if (!empty($projectMaterials))
-                <table class="data-table" style="margin-top: 1.5rem;">
-                    <thead>
-                        <tr>
-                            <th>No</th>
-                            <th>Jenis Material</th>
-                            <th>Uraian Pekerjaan</th>
-                            <th>Satuan</th> 
-                            <th>Volume</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($projectMaterials as $material)
+                <div class="table-responsive" style="margin-top: 1.5rem;">
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <td>{{ htmlspecialchars($material['No']) }}</td>
-                                <td>{{ htmlspecialchars($material['Jenis Material']) }}</td>
-                                <td>{{ htmlspecialchars($material['Uraian Pekerjaan']) }}</td>
-                                <td>{{ htmlspecialchars($material['Satuan']) }}</td> 
-                                <td>{{ htmlspecialchars($material['Volume']) }}</td> 
+                                <th>No</th>
+                                <th>Jenis Material</th>
+                                <th>Uraian Pekerjaan</th>
+                                <th>Satuan</th> 
+                                <th>Volume</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach ($projectMaterials as $material)
+                                <tr>
+                                    <td>{{ htmlspecialchars($material['No'] ?? $material['NO'] ?? '') }}</td>
+                                    <td>{{ htmlspecialchars($material['Jenis Material'] ?? $material['DESIGNATOR'] ?? '') }}</td>
+                                    <td>{{ htmlspecialchars($material['Uraian Pekerjaan'] ?? '') }}</td>
+                                    <td>{{ htmlspecialchars($material['Satuan'] ?? '') }}</td> 
+                                    <td>{{ htmlspecialchars($material['Volume'] ?? $material['VOL'] ?? '') }}</td> 
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             @else
                 <p style="padding: 1.5rem 0; text-align: center;">Belum ada data material untuk proyek ini.</p>
             @endif
+
+            {{-- Form Baru untuk Tambah Material (Autofill) --}}
+            <div style="border-top: 1px solid #e5e7eb; margin-top: 1.5rem; padding-top: 1.5rem;">
+                <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Tambah Material Manual</h4>
+                <form action="{{ route('project.addMaterial', ['rowIndex' => $rowIndex]) }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="id_project_posjar" value="{{ $selectedRow[array_search('ID PROJECT POSJAR', $header)] ?? '' }}">
+                    <input type="hidden" name="lokasi_jalan" value="{{ $selectedRow[array_search('LOKASI/JALAN', $header)] ?? '' }}">
+                    <input type="hidden" name="no" value="{{ count($projectMaterials) + 1 }}">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="jenis_material_input" class="form-label">Jenis Material (Designator)</label>
+                            <input list="designator-options" class="form-control" id="jenis_material_input" name="jenis_material" required autocomplete="off">
+                            <datalist id="designator-options">
+                                @foreach (json_decode($boqData, true) as $designator => $data)
+                                    <option value="{{ $designator }}">
+                                @endforeach
+                            </datalist>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="volume_input" class="form-label">Volume</label>
+                            <input type="number" step="any" class="form-control" id="volume_input" name="volume" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="uraian_pekerjaan_input" class="form-label">Uraian Pekerjaan</label>
+                        <textarea class="form-control" id="uraian_pekerjaan_input" name="uraian_pekerjaan" rows="2" readonly style="background-color: #e9ecef;"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="satuan_input" class="form-label">Satuan</label>
+                        <input type="text" class="form-control" id="satuan_input" name="satuan" readonly style="background-color: #e9ecef;">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Simpan Material</button>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -133,7 +194,7 @@
                     Foto Proyek
                 </h3>
                 @if (count($allPhotos) > 3)
-                    <a href="{{ route('project.gallery', ['rowIndex' => $rowIndex]) }}" class="view-all-link">
+                    <a href="{{ route('project.gallery.all', ['rowIndex' => $rowIndex]) }}" class="view-all-link">
                         Lihat Semua ({{ count($allPhotos) }})
                         <i data-feather="arrow-right" class="icon-sm"></i>
                     </a>
@@ -170,49 +231,29 @@
         </div>
     </div>
 </div>
-
-{{-- Modal (Form Popup) untuk Tambah Material --}}
-<div class="modal fade" id="addMaterialModal" tabindex="-1" aria-labelledby="addMaterialModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addMaterialModalLabel">Tambah Material Baru</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('project.addMaterial', ['rowIndex' => $rowIndex]) }}" method="POST">
-                @csrf
-                {{-- Hidden fields untuk mengirim data proyek --}}
-                <input type="hidden" name="id_project_posjar" value="{{ $selectedRow[array_search('ID PROJECT POSJAR', $header)] ?? '' }}">
-                <input type="hidden" name="lokasi_jalan" value="{{ $selectedRow[array_search('LOKASI/JALAN', $header)] ?? '' }}">
-
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="no" class="form-label">No</label>
-                        <input type="text" class="form-control" id="no" name="no" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="jenis_material" class="form-label">Jenis Material</label>
-                        <input type="text" class="form-control" id="jenis_material" name="jenis_material" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="uraian_pekerjaan" class="form-label">Uraian Pekerjaan</label>
-                        <input type="text" class="form-control" id="uraian_pekerjaan" name="uraian_pekerjaan" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="satuan" class="form-label">Satuan (e.g., meter, buah)</label>
-                        <input type="text" class="form-control" id="satuan" name="satuan" required>
-                    </div>
-                     <div class="mb-3">
-                        <label for="volume" class="form-label">Volume (hanya angka)</label>
-                        <input type="number" step="any" class="form-control" id="volume" name="volume" required>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">Simpan Material</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 @endsection
+
+@push('scripts')
+{{-- JavaScript untuk Autofill --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const boqData = JSON.parse(@json($boqData));
+        const jenisMaterialInput = document.getElementById('jenis_material_input');
+        const uraianPekerjaanTextarea = document.getElementById('uraian_pekerjaan_input');
+        const satuanInput = document.getElementById('satuan_input');
+
+        jenisMaterialInput.addEventListener('input', function() {
+            const selectedDesignator = this.value;
+            const materialData = boqData[selectedDesignator];
+
+            if (materialData) {
+                uraianPekerjaanTextarea.value = materialData.uraian;
+                satuanInput.value = materialData.satuan;
+            } else {
+                uraianPekerjaanTextarea.value = '';
+                satuanInput.value = '';
+            }
+        });
+    });
+</script>
+@endpush
